@@ -21,29 +21,34 @@ def get_market_data(ticker, start, end, interval="5m"):
     else:
         print("Cache found. Checking coverage...")
 
-        df["datetime"] = pd.to_datetime(df["datetime"])
+    df["datetime"] = pd.to_datetime(df["datetime"], utc=True)
 
-        stored_start = df["datetime"].min()
-        stored_end = df["datetime"].max()
+    stored_start = df["datetime"].min()
+    stored_end = df["datetime"].max()
 
-        requested_start = pd.to_datetime(start,utc=True)
-        requested_end = pd.to_datetime(end, utc=True)
+    requested_start = pd.to_datetime(start, utc=True)
+    requested_end = pd.to_datetime(end, utc=True)
 
-        if requested_start < stored_start or requested_end > stored_end:
-            print("Requested range outside cache. Updating cache...")
 
-            new_df = download_market_data(ticker, start, end, interval)
-            new_df = preprocess_market_data(new_df)
-            new_df = add_derived_metrics(new_df)
+    if requested_start < stored_start.replace(hour=0, minute=0) or requested_end > stored_end.replace(hour=0,minute=0):
+        print("Requested range outside cache. Updating cache...")
 
-            # Merge and remove duplicates
-            df = pd.concat([df, new_df])
-            df = df.drop_duplicates(subset="datetime")
-            df = df.sort_values("datetime").reset_index(drop=True)
+        # Only download missing parts instead of entire range
+        download_start = min(requested_start, stored_start)
+        download_end = max(requested_end, stored_end)
 
-            save_to_parquet(df, ticker, interval)
-        else:
-            print("Requested range fully covered by cache.")
+        new_df = download_market_data(ticker, download_start, download_end, interval)
+        new_df = preprocess_market_data(new_df)
+        new_df = add_derived_metrics(new_df)
+        new_df["datetime"] = pd.to_datetime(new_df["datetime"], utc=True)
+
+
+        df = pd.concat([df, new_df]).drop_duplicates(subset="datetime")
+        df = df.sort_values("datetime").reset_index(drop=True)
+
+        save_to_parquet(df, ticker, interval)
+    else:
+        print("Requested range fully covered by cache.")
 
     requested_start = pd.to_datetime(start, utc=True)
     requested_end = pd.to_datetime(end, utc=True)
@@ -51,6 +56,12 @@ def get_market_data(ticker, start, end, interval="5m"):
     mask = (df["datetime"] >= requested_start) & \
        (df["datetime"] <= requested_end)
 
-    df = df.loc[mask].reset_index(drop=True)
+    df = df.loc[mask].copy()
+    df["datetime"] = pd.to_datetime(df["datetime"], utc=True)
+
+    df = df.set_index("datetime")
+
+# Sort index (important for .loc slicing)
+    df = df.sort_index()
 
     return df
