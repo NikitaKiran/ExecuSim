@@ -62,6 +62,11 @@ class TWAPStrategy(Strategy):
 # ==========================================
 
 class VWAPStrategy(Strategy):
+    def __init__(self, slice_frequency=1, participation_cap=1.0, aggressiveness=1.0):
+     self.slice_frequency = slice_frequency
+     self.participation_cap = participation_cap
+     self.aggressiveness = aggressiveness
+
     """
     Volume Weighted Average Price Strategy.
     Allocates trade quantity proportional to the volume traded in each candle.
@@ -73,7 +78,12 @@ class VWAPStrategy(Strategy):
         market_data: pd.DataFrame
     ) -> List[ChildOrder]:
 
+        # window_data = market_data.loc[order.start_time:order.end_time]
+
         window_data = market_data.loc[order.start_time:order.end_time]
+
+        # Apply slice frequency (sample every N rows)
+        window_data = window_data.iloc[::self.slice_frequency]
 
         if window_data.empty:
             return []
@@ -90,7 +100,8 @@ class VWAPStrategy(Strategy):
 
         for i, (ts, vol) in enumerate(zip(timestamps, volumes)):
 
-            weight = vol / total_window_volume
+            weight = (vol / total_window_volume) * self.aggressiveness
+            weight = min(weight, self.participation_cap)
 
             if i == len(timestamps) - 1:
                 qty = order.quantity - cumulative_qty

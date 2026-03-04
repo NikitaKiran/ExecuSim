@@ -169,7 +169,7 @@ market_data = get_market_data(
     ticker="AAPL",
     start="2025-12-30",
     end="2026-02-26",
-    interval="5m"
+    interval="1d"
 )
 
 print("\n--- Raw Market Data ---")
@@ -256,3 +256,123 @@ print(df_twap[['timestamp','filled_qty','market_volume','participation_rate','st
 
 print("\n--- VWAP logs ---")
 print(df_vwap[['timestamp','filled_qty','market_volume','participation_rate','strategy_name']])
+
+# ==============================
+# 6️⃣ Phase 5 — GA Optimization
+# ==============================
+
+from optimization.ga_optimizer import GAOptimizer
+
+
+# -----------------------------------
+# Define Evaluation Function
+# -----------------------------------
+
+def execution_cost_function(params):
+    """
+    This function will be called by GA.
+    It must return implementation shortfall (lower is better).
+    """
+
+    # Create VWAP strategy with tunable parameters
+    vwap_strategy = VWAPStrategy(
+        slice_frequency=params["slice_frequency"],
+        participation_cap=params["participation_cap"],
+        aggressiveness=params["aggressiveness"]
+    )
+
+    schedule = vwap_strategy.generate_schedule(order, market_data)
+    if not schedule:
+        return 1e12  # Large penalty
+    logs = engine.run(order, schedule, "GA_OPTIMIZED")
+    if not logs:
+        return 1e12
+    
+    df = pd.DataFrame([vars(l) for l in logs])
+
+    arrival_price = compute_arrival_price(
+        market_data.reset_index().rename(columns={"index": "datetime", "Close": "close"}),
+        order.start_time
+    )
+
+    avg_price = compute_average_execution_price(df)
+    total_qty = df["filled_qty"].sum()
+    if total_qty == 0:
+        return 1e12
+
+    shortfall = compute_implementation_shortfall(
+        avg_price,
+        arrival_price,
+        total_qty,
+        order.side
+    )
+
+    return shortfall
+
+
+# -----------------------------------
+# Define Parameter Bounds
+# -----------------------------------
+
+param_bounds = {
+    "slice_frequency": (5, 60, "int"),
+    "participation_cap": (0.01, 0.25, "float"),
+    "aggressiveness": (0.8, 1.5, "float"),
+}
+
+
+# -----------------------------------
+# Run Genetic Algorithm
+# -----------------------------------
+
+optimizer = GAOptimizer(
+    evaluation_function=execution_cost_function,
+    param_bounds=param_bounds,
+    population_size=20,
+    generations=10,
+)
+
+ga_result = optimizer.optimize()
+
+print("\n--- GA OPTIMIZATION RESULT ---")
+print("Best Parameters:", ga_result["best_parameters"])
+print("Best Shortfall:", ga_result["best_cost"])
+
+
+# -----------------------------------
+# Compare Against VWAP Baseline
+# -----------------------------------
+
+improvement = ((shortfall_vwap - ga_result["best_cost"]) / shortfall_vwap) * 100
+
+print("\n--- IMPROVEMENT OVER VWAP ---")
+print(f"Improvement: {improvement:.2f}%")
+
+from optimization.ga_optimizer import GAOptimizer
+
+# Dummy evaluation function (simple test)
+def test_evaluation(params):
+    # We want to minimize (x-3)^2 + (y-5)^2
+    x = params["x"]
+    y = params["y"]
+    return (x - 3)**2 + (y - 5)**2
+
+
+if __name__ == "__main__":
+
+    param_bounds = {
+        "x": (0, 10, "float"),
+        "y": (0, 10, "float"),
+    }
+
+    optimizer = GAOptimizer(
+        evaluation_function=test_evaluation,
+        param_bounds=param_bounds,
+        population_size=20,
+        generations=15,
+    )
+
+    result = optimizer.optimize()
+
+    print("\nOptimization Result:")
+    print(result)
