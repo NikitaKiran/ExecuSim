@@ -1,8 +1,6 @@
 """
 ExecuSim — FastAPI Backend Application
-
-Phase 6: REST API layer exposing the execution simulation engine.
-Run with:  uvicorn api.app:app --reload --port 8000
+REST API layer exposing the execution simulation engine.
 """
 
 import sys
@@ -19,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.models import HealthResponse
 from api.routes.data import router as data_router
 from api.routes.execution import router as execution_router
+from api.routes.optimization import router as optimization_router
 
 # ==========================================
 # APP SETUP
@@ -49,6 +48,7 @@ app.add_middleware(
 
 app.include_router(data_router, prefix="/api")
 app.include_router(execution_router, prefix="/api")
+app.include_router(optimization_router, prefix="/api")
 
 # ==========================================
 # ROOT & HEALTH

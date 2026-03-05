@@ -112,6 +112,67 @@ class CompareResponse(BaseModel):
 
 
 
+class OptimizationRequest(BaseModel):
+    """Request body for running GA optimization on VWAP parameters."""
+    ticker: str = Field(default="AAPL", description="Ticker symbol")
+    side: Literal["BUY", "SELL"] = Field(..., description="Order side: BUY or SELL")
+    quantity: int = Field(..., gt=0, description="Total shares to execute")
+    start_time: str = Field(..., description="Execution window start (ISO 8601)")
+    end_time: str = Field(..., description="Execution window end (ISO 8601)")
+    data_start: str = Field(..., description="Market data fetch start date (YYYY-MM-DD)")
+    data_end: str = Field(..., description="Market data fetch end date (YYYY-MM-DD)")
+    interval: str = Field(default="5m", description="Candle interval")
+    # GA hyper-parameters (optional overrides)
+    population_size: int = Field(default=30, ge=5, description="GA population size")
+    generations: int = Field(default=20, ge=1, description="Number of GA generations")
+    seed: int = Field(default=42, description="Random seed for reproducibility")
+
+
+class OptimizationParamBound(BaseModel):
+    """Description of a single optimizable parameter."""
+    name: str
+    min_value: float
+    max_value: float
+    dtype: str
+
+
+class OptimizationParamsResponse(BaseModel):
+    """Response listing available optimization parameters and bounds."""
+    parameters: List[OptimizationParamBound]
+
+
+class OptimizationResultResponse(BaseModel):
+    """Response for a completed GA optimization run."""
+    best_parameters: dict
+    best_cost: float
+    generations_run: int
+    population_size: int
+    best_strategy_metrics: CostMetrics
+
+
+class EvaluateParamsRequest(BaseModel):
+    """Request body for evaluating a specific set of VWAP parameters."""
+    ticker: str = Field(default="AAPL", description="Ticker symbol")
+    side: Literal["BUY", "SELL"] = Field(..., description="Order side: BUY or SELL")
+    quantity: int = Field(..., gt=0, description="Total shares to execute")
+    start_time: str = Field(..., description="Execution window start (ISO 8601)")
+    end_time: str = Field(..., description="Execution window end (ISO 8601)")
+    data_start: str = Field(..., description="Market data fetch start date (YYYY-MM-DD)")
+    data_end: str = Field(..., description="Market data fetch end date (YYYY-MM-DD)")
+    interval: str = Field(default="5m", description="Candle interval")
+    # VWAP parameters to evaluate
+    slice_frequency: int = Field(default=1, ge=1, description="Sample every N candles")
+    participation_cap: float = Field(default=1.0, gt=0.0, le=1.0, description="Max participation rate per candle")
+    aggressiveness: float = Field(default=1.0, gt=0.0, le=2.0, description="Volume weight multiplier")
+
+
+class EvaluateParamsResponse(BaseModel):
+    """Response for parameter evaluation."""
+    parameters: dict
+    cost: float
+    metrics: CostMetrics
+
+
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str
