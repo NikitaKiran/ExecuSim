@@ -676,6 +676,29 @@ def main():
     print("\nOptimization Result (test):")
     print(result)
 
+    # -----------------------------
+    # Run best GA strategy
+    # -----------------------------
+
+    best_params = ga_result["best_parameters"]
+
+    ga_strategy = VWAPStrategy(
+        slice_frequency=best_params["slice_frequency"],
+        participation_cap=best_params["participation_cap"],
+        aggressiveness=best_params["aggressiveness"]
+    )
+
+    ga_schedule = ga_strategy.generate_schedule(order, market_data)
+
+    ga_logs = engine.run(order, ga_schedule, "GA_OPTIMIZED")
+
+    df_ga = pd.DataFrame([vars(l) for l in ga_logs])
+
+    df_ga = add_participation_rate(df_ga)
+
+    print("\n--- GA logs ---")
+    print(df_ga[['timestamp','filled_qty','market_volume','participation_rate','strategy_name']])
+
 
 if __name__ == "__main__":
     main()
