@@ -62,15 +62,16 @@ class TWAPStrategy(Strategy):
 # ==========================================
 
 class VWAPStrategy(Strategy):
-    def __init__(self, slice_frequency=1, participation_cap=1.0, aggressiveness=1.0):
-     self.slice_frequency = slice_frequency
-     self.participation_cap = participation_cap
-     self.aggressiveness = aggressiveness
-
     """
     Volume Weighted Average Price Strategy.
     Allocates trade quantity proportional to the volume traded in each candle.
     """
+
+    def __init__(self, slice_frequency=1, weight_cap=1.0, volume_participation_cap=0.2, aggressiveness=1.0):
+       self.slice_frequency = slice_frequency
+       self.weight_cap = weight_cap
+       self.volume_participation_cap = volume_participation_cap
+       self.aggressiveness = aggressiveness
 
     def generate_schedule(
         self,
@@ -101,12 +102,15 @@ class VWAPStrategy(Strategy):
         for i, (ts, vol) in enumerate(zip(timestamps, volumes)):
 
             weight = (vol / total_window_volume) * self.aggressiveness
-            weight = min(weight, self.participation_cap)
+            weight = min(weight, self.weight_cap)
 
             if i == len(timestamps) - 1:
-                qty = order.quantity - cumulative_qty
+                qty = max(0, order.quantity - cumulative_qty) 
             else:
-                qty = int(order.quantity * weight)
+                # qty = int(order.quantity * weight)
+                max_qty = int(vol * self.volume_participation_cap)
+                remaining_qty = order.quantity - cumulative_qty
+                qty = min(int(order.quantity * weight), max_qty, remaining_qty)
 
             cumulative_qty += qty
             schedule.append(ChildOrder(timestamp=ts, quantity=qty))
