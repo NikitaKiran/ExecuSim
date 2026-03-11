@@ -4,6 +4,7 @@ Optimization API routes — GA-based parameter tuning for execution strategies.
 
 import sys
 import os
+import pytz
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -40,7 +41,7 @@ router = APIRouter(prefix="/optimization", tags=["Optimization"])
 
 DEFAULT_PARAM_BOUNDS = {
     "slice_frequency": (1, 10, "int"),
-    "participation_cap": (0.01, 1.0, "float"),
+    "volume_participation_cap": (0.01, 1.0, "float"),
     "aggressiveness": (0.1, 2.0, "float"),
 }
 
@@ -49,14 +50,28 @@ DEFAULT_PARAM_BOUNDS = {
 # ==========================================
 
 
-def _build_order(req) -> ParentOrder:
-    """Build a ParentOrder from a request object."""
+
+
+def _build_order(req, market_data) -> ParentOrder:
+
+    first_day = market_data.index[0].date()
+
+    market_tz = pytz.timezone("US/Eastern")
+
+    # Interpret user input as market time
+    start_local = market_tz.localize(pd.Timestamp(f"{first_day} {req.start_time}"))
+    end_local = market_tz.localize(pd.Timestamp(f"{first_day} {req.end_time}"))
+
+    # Convert to UTC (matches market_data index)
+    start_time = start_local.astimezone(pytz.UTC)
+    end_time = end_local.astimezone(pytz.UTC)
+
     return ParentOrder(
         ticker=req.ticker,
         side=req.side,
         quantity=req.quantity,
-        start_time=pd.Timestamp(req.start_time, tz="UTC"),
-        end_time=pd.Timestamp(req.end_time, tz="UTC"),
+        start_time=start_time,
+        end_time=end_time,
     )
 
 
@@ -67,7 +82,7 @@ def _compute_cost(params: dict, market_data: pd.DataFrame, order: ParentOrder) -
     """
     strategy = VWAPStrategy(
         slice_frequency=int(params.get("slice_frequency", 1)),
-        participation_cap=float(params.get("participation_cap", 1.0)),
+        volume_participation_cap=float(params.get("volume_participation_cap", 1.0)),
         aggressiveness=float(params.get("aggressiveness", 1.0)),
     )
 
@@ -99,6 +114,7 @@ def _compute_cost(params: dict, market_data: pd.DataFrame, order: ParentOrder) -
     avg_price = compute_average_execution_price(df_logs)
     total_qty = int(df_logs["filled_qty"].sum())
     shortfall = compute_implementation_shortfall(avg_price, arrival_price, total_qty, order.side)
+    
 
     return abs(shortfall)
 
@@ -109,7 +125,7 @@ def _run_with_params(params: dict, market_data: pd.DataFrame, order: ParentOrder
     """
     strategy = VWAPStrategy(
         slice_frequency=int(params.get("slice_frequency", 1)),
-        participation_cap=float(params.get("participation_cap", 1.0)),
+        volume_participation_cap=float(params.get("volume_participation_cap", 1.0)),
         aggressiveness=float(params.get("aggressiveness", 1.0)),
     )
 
@@ -184,7 +200,7 @@ def list_optimization_params():
 def run_optimization(req: OptimizationRequest):
     """
     Run the Genetic Algorithm optimizer to find the best VWAP parameters
-    (slice_frequency, participation_cap, aggressiveness) that minimize
+    (slice_frequency, volume_participation_cap, aggressiveness) that minimize
     implementation shortfall for the given order.
 
     Workflow:
@@ -201,13 +217,15 @@ def run_optimization(req: OptimizationRequest):
             end=req.data_end,
             interval=req.interval,
         )
+        market_data.index = market_data.index.tz_convert("UTC")
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Market data error: {str(e)}")
 
     if market_data.empty:
         raise HTTPException(status_code=404, detail="No market data available for the specified range.")
 
-    order = _build_order(req)
+    order = _build_order(req,market_data)
 
     # Build evaluation closure for the GA
     def eval_fn(params: dict) -> float:
@@ -256,13 +274,14 @@ def evaluate_params(req: EvaluateParamsRequest):
             end=req.data_end,
             interval=req.interval,
         )
+        market_data.index = market_data.index.tz_convert("UTC")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Market data error: {str(e)}")
 
     if market_data.empty:
         raise HTTPException(status_code=404, detail="No market data available for the specified range.")
 
-    order = _build_order(req)
+    order = _build_order(req,market_data)
 
     params = {
         "slice_frequency": req.slice_frequency,

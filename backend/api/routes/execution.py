@@ -4,6 +4,7 @@ Execution simulation API routes.
 
 import sys
 import os
+import pytz
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -43,14 +44,27 @@ STRATEGY_MAP = {
 }
 
 
-def _build_parent_order(req) -> ParentOrder:
-    """Build a ParentOrder from a request object."""
+
+def _build_parent_order(req, market_data) -> ParentOrder:
+
+    first_day = market_data.index[0].date()
+
+    market_tz = pytz.timezone("US/Eastern")
+
+    # Interpret user input as market time
+    start_local = market_tz.localize(pd.Timestamp(f"{first_day} {req.start_time}"))
+    end_local = market_tz.localize(pd.Timestamp(f"{first_day} {req.end_time}"))
+
+    # Convert to UTC (matches market_data index)
+    start_time = start_local.astimezone(pytz.UTC)
+    end_time = end_local.astimezone(pytz.UTC)
+
     return ParentOrder(
         ticker=req.ticker,
         side=req.side,
         quantity=req.quantity,
-        start_time=pd.Timestamp(req.start_time, tz="UTC"),
-        end_time=pd.Timestamp(req.end_time, tz="UTC"),
+        start_time=start_time,
+        end_time=end_time,
     )
 
 
@@ -172,13 +186,14 @@ def run_simulation(req: SimulationRequest):
             end=req.data_end,
             interval=req.interval,
         )
+        market_data.index = market_data.index.tz_convert("UTC")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Market data error: {str(e)}")
 
     if market_data.empty:
         raise HTTPException(status_code=404, detail="No market data available for the specified range.")
 
-    order = _build_parent_order(req)
+    order = _build_parent_order(req,market_data)
 
     result = _run_single_strategy(market_data, order, req.strategy)
 
@@ -209,13 +224,14 @@ def compare_strategies(req: CompareRequest):
             end=req.data_end,
             interval=req.interval,
         )
+        market_data.index = market_data.index.tz_convert("UTC")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Market data error: {str(e)}")
 
     if market_data.empty:
         raise HTTPException(status_code=404, detail="No market data available.")
 
-    order = _build_parent_order(req)
+    order = _build_parent_order(req,market_data)
 
     comparisons = []
     results = {}
