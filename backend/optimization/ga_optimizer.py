@@ -1423,8 +1423,8 @@ class GAOptimizer:
             # replace population
             pop[:] = offspring
 
-            # ensure elite survives
-            pop[0] = self.toolbox.clone(halloffame[0])
+            if len(halloffame) > 0:
+             pop[0] = self.toolbox.clone(halloffame[0])
 
             halloffame.update(pop)
 
