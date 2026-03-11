@@ -1116,7 +1116,8 @@ def main():
     except Exception:
         improvement = float("nan")
     print("\n--- IMPROVEMENT OVER VWAP ---")
-    print(f"Improvement: {improvement:.2f}%")
+    # print(f"Improvement: {improvement:.2f}%")
+    print(f"Improvement: {improvement}%")
 
     # Small GA test (sanity-check)
     from optimization.ga_optimizer import GAOptimizer as GAOptTester
