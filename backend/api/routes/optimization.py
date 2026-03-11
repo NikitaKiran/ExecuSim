@@ -77,8 +77,8 @@ def _build_order(req, market_data) -> ParentOrder:
         ticker=req.ticker,
         side=req.side,
         quantity=req.quantity,
-        start_time=pd.Timestamp(req.start_time, tz="UTC"),
-        end_time=pd.Timestamp(req.end_time, tz="UTC"),
+        start_time=start_time,
+        end_time=end_time,
     )
 
 
