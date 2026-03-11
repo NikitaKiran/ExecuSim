@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 
 from api.models import (
     SimulationRequest,
@@ -31,6 +32,12 @@ from execution.cost_model import (
     compute_implementation_shortfall,
     add_participation_rate,
 )
+
+from sqlalchemy.orm import Session
+from fastapi import Depends
+
+from db.database import get_db
+from db.repository import save_experiment
 
 router = APIRouter(prefix="/execution", tags=["Execution"])
 
@@ -168,8 +175,8 @@ def list_strategies():
     }
 
 
-@router.post("/simulate", response_model=SimulationResponse)
-def run_simulation(req: SimulationRequest):
+@router.post("/simulate")
+def run_simulation(req: SimulationRequest, db: Session = Depends(get_db)):
     """
     Run an execution simulation for a single strategy.
 
@@ -197,7 +204,16 @@ def run_simulation(req: SimulationRequest):
 
     result = _run_single_strategy(market_data, order, req.strategy)
 
-    return SimulationResponse(
+    df_logs = result["df_logs"]
+    experiment_id = save_experiment(
+        db=db,
+        order=order,
+        strategy=req.strategy,
+        metrics=result["metrics"],
+        df_logs=df_logs,
+    )
+
+    response = SimulationResponse(
         order={
             "ticker": order.ticker,
             "side": order.side,
@@ -209,6 +225,10 @@ def run_simulation(req: SimulationRequest):
         metrics=result["metrics"],
         execution_logs=result["log_entries"],
     )
+    response_dict = response.dict()
+    response_dict["experiment_id"] = str(experiment_id)
+
+    return JSONResponse(content=response_dict)
 
 
 @router.post("/compare", response_model=CompareResponse)

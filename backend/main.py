@@ -756,6 +756,7 @@ from execution.strategies import TWAPStrategy, VWAPStrategy
 from execution.cost_model import *
 
 import pandas as pd
+import random
 import time
 import numpy as np
 from typing import Dict, Any, Optional
@@ -842,7 +843,8 @@ def execution_cost_function(params: Dict[str, Any]) -> float:
             return float(LARGE_PENALTY)
 
         arrival_price = compute_arrival_price(
-            md.reset_index().rename(columns={"index": "datetime", "Close": "close"}),
+            # md.reset_index().rename(columns={"index": "datetime", "Close": "close"}),
+            md.reset_index(),
             po.start_time
         )
         avg_price = compute_average_execution_price(df)
@@ -1061,34 +1063,61 @@ def main():
 
 
     # Start GA — keep small while debugging (increase later)
-    optimizer = GAOptimizer(
-        evaluation_function=execution_cost_function,
-        param_bounds=param_bounds,
-        population_size=40,   # small while debugging
-        generations=25,
-        n_workers=4          # set >1 once eval function tested & picklable
-    )
+    # optimizer = GAOptimizer(
+    #     evaluation_function=execution_cost_function,
+    #     param_bounds=param_bounds,
+    #     population_size=40,   # small while debugging
+    #     generations=25,
+    #     n_workers=4          # set >1 once eval function tested & picklable
+    # )
 
-    print(f"\nRunning GA with {optimizer.n_workers} worker(s)")
-    print("\n--- Starting GA Optimization ---")
+    # print(f"\nRunning GA with {optimizer.n_workers} worker(s)")
+    # print("\n--- Starting GA Optimization ---")
+    # start_time = time.time()
+
+    # ga_result = optimizer.optimize(verbose=True)
+
+    # Run GA twice with different seeds, keep the best result
     start_time = time.time()
 
-    ga_result = optimizer.optimize(verbose=True)
+    best_result = None
+    best_seed = None
+
+    for seed in random.sample(range(10000), 2):
+        print(f"\n--- GA Run (seed={seed}) ---")
+
+        optimizer = GAOptimizer(
+            evaluation_function=execution_cost_function,
+            param_bounds=param_bounds,
+            population_size=40,
+            generations=25,
+            n_workers=4,
+            seed=seed
+        )
+
+        result = optimizer.optimize(verbose=True)
+
+        if best_result is None or result["best_cost"] < best_result["best_cost"]:
+            best_result = result
+            best_seed = seed
 
     end_time = time.time()
-    print(f"\nGA Runtime: {end_time - start_time:.2f} seconds")
+    print(f"\nGA Runtime (both runs): {end_time - start_time:.2f} seconds")
+
+    print(f"\nBest result came from seed={best_seed}")
+    ga_result = best_result
 
     print("\n--- GA OPTIMIZATION RESULT ---")
     print("Best Parameters:", ga_result["best_parameters"])
     print("Best Shortfall:", ga_result["best_cost"])
 
-    # Compare against baseline VWAP (if baseline shortfall computed)
     try:
         improvement = ((shortfall_vwap - ga_result["best_cost"]) / shortfall_vwap) * 100
     except Exception:
         improvement = float("nan")
     print("\n--- IMPROVEMENT OVER VWAP ---")
-    print(f"Improvement: {improvement:.2f}%")
+    # print(f"Improvement: {improvement:.2f}%")
+    print(f"Improvement: {improvement}%")
 
     # Small GA test (sanity-check)
     from optimization.ga_optimizer import GAOptimizer as GAOptTester
@@ -1129,15 +1158,12 @@ def main():
     )
 
     ga_schedule = ga_strategy.generate_schedule(order, market_data)
-
     ga_logs = engine.run(order, ga_schedule, "GA_OPTIMIZED")
-
     df_ga = pd.DataFrame([vars(l) for l in ga_logs])
-
     df_ga = add_participation_rate(df_ga)
 
     print("\n--- GA logs ---")
-    print(df_ga[['timestamp','filled_qty','market_volume','participation_rate','strategy_name']])
+    print(df_ga[['timestamp', 'filled_qty', 'market_volume', 'participation_rate', 'strategy_name']])
 
 
 if __name__ == "__main__":
