@@ -18,6 +18,7 @@ from api.models import HealthResponse
 from api.routes.data import router as data_router
 from api.routes.execution import router as execution_router
 from api.routes.optimization import router as optimization_router
+from api.routes.experiments import router as experiments_router
 
 # ==========================================
 # APP SETUP
@@ -32,6 +33,12 @@ app = FastAPI(
     ),
     version="0.1.0",
 )
+
+# Ensure DB tables exist on startup
+@app.on_event("startup")
+def on_startup():
+    from db.bootstrap import bootstrap_database
+    bootstrap_database()
 
 # CORS — allow React frontend (Phase 8) to call the API
 app.add_middleware(
@@ -49,6 +56,7 @@ app.add_middleware(
 app.include_router(data_router, prefix="/api")
 app.include_router(execution_router, prefix="/api")
 app.include_router(optimization_router, prefix="/api")
+app.include_router(experiments_router, prefix="/api")
 
 # ==========================================
 # ROOT & HEALTH

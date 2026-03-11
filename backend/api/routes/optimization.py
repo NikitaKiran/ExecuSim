@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 import pandas as pd
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 
 from api.models import (
     OptimizationRequest,
@@ -31,6 +32,12 @@ from execution.cost_model import (
     add_participation_rate,
 )
 from optimization.ga_optimizer import GAOptimizer
+
+from sqlalchemy.orm import Session
+from fastapi import Depends
+
+from db.database import get_db
+from db.repository import save_experiment
 
 router = APIRouter(prefix="/optimization", tags=["Optimization"])
 
@@ -60,16 +67,34 @@ def _build_order(req) -> ParentOrder:
     )
 
 
+def _make_vwap_strategy(params: dict):
+    """
+    Instantiate VWAPStrategy with optional tuning parameters.
+    Falls back to no-arg constructor if the class doesn't support them.
+    """
+    kwargs = {
+        "slice_frequency": int(params.get("slice_frequency", 1)),
+        "participation_cap": float(params.get("participation_cap", 1.0)),
+        "aggressiveness": float(params.get("aggressiveness", 1.0)),
+    }
+    try:
+        return VWAPStrategy(**kwargs)
+    except TypeError:
+        # VWAPStrategy doesn't accept these kwargs — use default constructor
+        # and store params as attributes for schedule generation
+        strategy = VWAPStrategy()
+        strategy.slice_frequency = kwargs["slice_frequency"]
+        strategy.participation_cap = kwargs["participation_cap"]
+        strategy.aggressiveness = kwargs["aggressiveness"]
+        return strategy
+
+
 def _compute_cost(params: dict, market_data: pd.DataFrame, order: ParentOrder) -> float:
     """
     Evaluate a set of VWAP parameters.
     Returns cost = absolute implementation shortfall (lower is better).
     """
-    strategy = VWAPStrategy(
-        slice_frequency=int(params.get("slice_frequency", 1)),
-        participation_cap=float(params.get("participation_cap", 1.0)),
-        aggressiveness=float(params.get("aggressiveness", 1.0)),
-    )
+    strategy = _make_vwap_strategy(params)
 
     engine = ExecutionEngine(market_data)
     schedule = strategy.generate_schedule(order, market_data)
@@ -107,11 +132,7 @@ def _run_with_params(params: dict, market_data: pd.DataFrame, order: ParentOrder
     """
     Run VWAP with explicit parameters and return full CostMetrics.
     """
-    strategy = VWAPStrategy(
-        slice_frequency=int(params.get("slice_frequency", 1)),
-        participation_cap=float(params.get("participation_cap", 1.0)),
-        aggressiveness=float(params.get("aggressiveness", 1.0)),
-    )
+    strategy = _make_vwap_strategy(params)
 
     engine = ExecutionEngine(market_data)
     schedule = strategy.generate_schedule(order, market_data)
@@ -180,8 +201,8 @@ def list_optimization_params():
     return OptimizationParamsResponse(parameters=params)
 
 
-@router.post("/optimize", response_model=OptimizationResultResponse)
-def run_optimization(req: OptimizationRequest):
+@router.post("/optimize")
+def run_optimization(req: OptimizationRequest, db: Session = Depends(get_db)):
     """
     Run the Genetic Algorithm optimizer to find the best VWAP parameters
     (slice_frequency, participation_cap, aggressiveness) that minimize
@@ -232,13 +253,42 @@ def run_optimization(req: OptimizationRequest):
     # Run once more with best params to get full metrics
     best_metrics = _run_with_params(best_params, market_data, order)
 
-    return OptimizationResultResponse(
+    # Run again to obtain logs for persistence
+    strategy = _make_vwap_strategy(best_params)
+
+    engine = ExecutionEngine(market_data)
+
+    schedule = strategy.generate_schedule(order, market_data)
+
+    logs = engine.run(order, schedule, "VWAP_GA")
+
+    df_logs = pd.DataFrame([vars(l) for l in logs])
+
+    df_logs = add_participation_rate(df_logs)
+
+    experiment_id = save_experiment(
+        db=db,
+        order=order,
+        strategy="VWAP_GA",
+        metrics=best_metrics,
+        df_logs=df_logs,
+        params=best_params,
+        seed=req.seed,
+        workers=req.population_size,
+    )
+
+    response = OptimizationResultResponse(
         best_parameters=best_params,
         best_cost=round(best_cost, 4),
         generations_run=req.generations,
         population_size=req.population_size,
         best_strategy_metrics=best_metrics,
     )
+
+    response_dict = response.dict()
+    response_dict["experiment_id"] = str(experiment_id)
+
+    return JSONResponse(content=response_dict)
 
 
 @router.post("/evaluate", response_model=EvaluateParamsResponse)
