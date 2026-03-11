@@ -1,0 +1,312 @@
+1️⃣ Home / Dashboard Page
+
+Purpose: Entry point for the platform.
+
+What to show
+
+Project title
+
+Short description
+
+Navigation buttons to main tools
+
+Buttons
+
+Fetch Market Data
+
+Run Strategy Simulation
+
+Compare Strategies
+
+Optimize VWAP
+
+Evaluate Parameters
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~``
+2️⃣ Market Data Explorer
+
+Connected to:
+
+POST /data/market
+Page
+/market-data
+Inputs
+
+Ticker
+
+Start date
+
+End date
+
+Interval
+
+Example UI:
+
+Ticker: [ AAPL ]
+Start:  [ 2023-01-01 ]
+End:    [ 2023-01-05 ]
+Interval: [1m]
+
+[Fetch Data]
+Output
+
+Display:
+
+Candlestick chart
+
+Volume chart
+
+Table of candles
+
+Fields from API:
+
+datetime
+open
+high
+low
+close
+volume
+typical_price
+candle_vwap
+
+Charts to show:
+
+OHLC Candlestick
+
+Volume bars
+
+VWAP line
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~```
+3️⃣ Execution Simulation Page
+
+Connected to:
+
+POST /execution/simulate
+GET  /execution/strategies
+Page
+/simulate
+Inputs
+Ticker
+Side (BUY/SELL)
+Quantity
+Start Time
+End Time
+Data Start
+Data End
+Interval
+Strategy (TWAP / VWAP)
+Example UI
+Ticker: AAPL
+Side: BUY
+Quantity: 10000
+
+Execution Window
+Start: 09:30
+End:   10:30
+
+Data Range
+Start: 2023-01-05
+End:   2023-01-05
+
+Strategy: [TWAP ▼]
+
+[Run Simulation]
+Output Sections
+1️⃣ Metrics
+Arrival Price
+Average Execution Price
+Slippage
+Implementation Shortfall
+Total Filled Quantity
+2️⃣ Execution Logs Table
+
+Columns:
+
+timestamp
+requested_qty
+filled_qty
+execution_price
+market_volume
+participation_rate
+3️⃣ Execution Chart
+
+Plot:
+
+Price
+Execution points
+Volume
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~````
+4️⃣ Strategy Comparison Page
+
+Connected to:
+
+POST /execution/compare
+Page
+/compare
+Inputs
+
+Same as simulation but no strategy selection.
+
+Example:
+
+Ticker
+Side
+Quantity
+Start Time
+End Time
+Data Start
+Data End
+Interval
+
+[Compare Strategies]
+Output
+
+Comparison table:
+
+Strategy	Arrival Price	Avg Exec Price	Slippage	Shortfall
+TWAP	...	...	...	...
+VWAP	...	...	...	...
+
+Recommendation message:
+
+VWAP produced lower slippage.
+VWAP is recommended for this execution window.
+
+Visualization idea:
+
+Bar chart of slippage
+
+Bar chart of shortfall
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~````
+5️⃣ Optimization Page (Genetic Algorithm)
+
+Connected to:
+
+GET  /optimization/params
+POST /optimization/optimize
+Page
+/optimize
+Inputs
+Ticker
+Side
+Quantity
+Start Time
+End Time
+Data Start
+Data End
+Interval
+
+// these things will  be visible to the user if the user selected the advanced optimization
+// else we will set these parameters in backend
+GA Settings
+Population Size
+Generations
+Seed (optional)
+
+Example UI
+
+Population Size: 50
+Generations: 30
+
+[Run Optimization]
+Output
+Best Parameters
+slice_frequency
+participation_cap
+aggressiveness
+
+Example
+
+slice_frequency = 3
+participation_cap = 0.18
+aggressiveness = 1.25
+Best Cost
+Implementation Shortfall = 124.25
+Metrics
+Arrival Price
+Avg Execution Price
+Slippage
+Shortfall
+Total Filled
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~```
+
+6️⃣ Parameter Evaluation Page
+
+Connected to:
+
+POST /optimization/evaluate
+Page
+/evaluate
+
+Purpose: manual parameter testing
+
+Inputs
+slice_frequency
+participation_cap
+aggressiveness
+
+Example UI
+
+slice_frequency: 4
+participation_cap: 0.20
+aggressiveness: 1.3
+
+[Evaluate]
+Output
+Cost
+Implementation Shortfall
+Slippage
+Avg Execution Price
+
+This page is useful for debugging GA results.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~```
+7️⃣ Optional Advanced Page (Very Good for Portfolio)
+Execution Visualization
+/visualize-execution
+
+Charts:
+
+Price vs Execution Points
+
+Cumulative Quantity
+
+Participation Rate Over Time
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+========================================
+I am making a website named Execusim which simulates large parent orders by different strategies, so i want to make the following pages, one of themm being the home page which contains the website intriduction, and buttons to go to the other pages like 'MarketData' , 'Run Strategy simulation', 'Compare strategies, 'Optimize VWAP', 'Evaluate parameters', Now MarketData should direct to the page where user should be some values which will be taken input from user like Ticker, StartDate, EndDate, Interval and then this should fetch the data and show candlestick chart of the fetched data and also the volume chart of the fteched data, the api returns the followinf values, datetime, open price, close price, high, low, volume, typical_price and candle_vwap here we can show the OHLC candlestick chart, the volume bars
+Now the button Run Strategy simulation should take to the page Execution Simulation page which has some variables which will be taken input from the user like Ticker, Side(Buy/Sell) Quantity, Start time, End time, Start date, End date, Interval, Strategy (twap/vwap), this page should show based on this input taken a table containing the following values, arrival price, average execution price, slippage, implementation shortfall, total filled quantity and some execution logs like timestamp, requested qty, filled_qty, execution price, market_volumne, participation_rate and a execution chart showing price, execution points and volume
+Now the Compare strategies button should redirect to the page strategy comparison page which has the variables that it will ask from user like ticker, side(buy/sell), quantity, start time, end time, start date, end date, interval and then a comparison table should be printed with the following attributes corresponding to each of the strategies arrival price, avg execution price, slippage, shortfall and then a recommendation message like VWAP produced lower slippage.
+VWAP is recommended for this execution window.
+Here we can show the bar chart of slippage and shortfall for both the strategies
+Then the optimize Vwap button should take to the page optimization page which takes the following inputs from the user like ticker, side(buy/sell) , quantity, start time, end time, start date, end date, interval, now there shall also be the option for checking on the advanced optimization where the user is also asked to fill in three more parameters there three should be visible only if the user selects the advanced optimization and these three things will be GA Settings-> population size, generations, seed(optional) and these optimizations shall be exeuted and the following output should come like best parameters, slice_frequency, participation_capital and aggressiveness and a table can also be printed like arrival price, avg execution price, slippage, shortfall, and the total filled.
+Then evaluate parameters button shall take the user to the Parameer evaluation page which takes the following things as input from the user like slice_frequency, participation_Capital and the aggressiveness and based on the values taken from the user the follwing things are  given as the output in a tabular format cost,implementationshortfall, slippage and the avg executin price, this page is basically useful for debugging the ga results, you may follow this color scheme
+Navy Blue (main interface elements)
+
+Charcoal Grey (background)
+
+Steel Blue (panels/cards)
+
+Emerald Green (strategy profit / success indicators)
+
+Soft White (text)
