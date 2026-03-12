@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide scrollbar for wheel pickers */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 @layer base {
   :root {
     --background: 200 25% 10%;
