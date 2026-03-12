@@ -93,6 +93,9 @@ const MarketData = () => {
     };
   }, [data]);
 
+  // Format Y-axis ticks nicely (e.g., $150.25)
+  const formatPrice = (value: number) => `$${value.toFixed(2)}`;
+
   return (
     <PageLayout title="MARKET DATA">
       <section className="border border-border bg-card p-6 mb-0">
@@ -101,41 +104,55 @@ const MarketData = () => {
         </h2>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <label className="font-mono text-xs text-muted-foreground tracking-widest block mb-1">
+          {/* Ticker */}
+          <div className="flex flex-col">
+            <label className="font-mono text-xs text-muted-foreground tracking-widest mb-1">
               TICKER
             </label>
             <select
               value={ticker}
               onChange={(e) => setTicker(e.target.value)}
-              className="w-full bg-muted border border-border text-foreground font-mono text-sm px-3 py-2 focus:outline-none focus:border-primary"
+              className="h-10 bg-muted border border-border text-foreground font-mono text-sm px-3 rounded-md focus:outline-none focus:border-primary"
             >
               <option value="AAPL">AAPL</option>
             </select>
           </div>
 
-          <InputField
-            label="START DATE"
-            value={startDate}
-            onChange={setStartDate}
-            type="date"
-          />
+          {/* Start Date */}
+          <div className="flex flex-col">
+            <label className="font-mono text-xs text-muted-foreground tracking-widest mb-1">
+              START DATE
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-10 bg-muted border border-border text-foreground font-mono text-sm px-3 rounded-md focus:outline-none focus:border-primary"
+            />
+          </div>
 
-          <InputField
-            label="END DATE"
-            value={endDate}
-            onChange={setEndDate}
-            type="date"
-          />
+          {/* End Date */}
+          <div className="flex flex-col">
+            <label className="font-mono text-xs text-muted-foreground tracking-widest mb-1">
+              END DATE
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="h-10 bg-muted border border-border text-foreground font-mono text-sm px-3 rounded-md focus:outline-none focus:border-primary"
+            />
+          </div>
 
-          <div>
-            <label className="font-mono text-xs text-muted-foreground tracking-widest block mb-1">
+          {/* Interval */}
+          <div className="flex flex-col">
+            <label className="font-mono text-xs text-muted-foreground tracking-widest mb-1">
               INTERVAL
             </label>
             <select
               value={interval}
               onChange={(e) => setInterval(e.target.value)}
-              className="w-full bg-muted border border-border text-foreground font-mono text-sm px-3 py-2 focus:outline-none focus:border-primary"
+              className="h-10 bg-muted border border-border text-foreground font-mono text-sm px-3 rounded-md focus:outline-none focus:border-primary"
             >
               <option value="1m">1 Minute</option>
               <option value="5m">5 Minutes</option>
@@ -150,7 +167,7 @@ const MarketData = () => {
 
             {["5d", "1wk", "1mo"].includes(interval) && (
               <p className="text-xs text-yellow-400/80 mt-1 font-mono">
-                Showing most recent daily candles (limited to fit period)
+                Showing most recent daily candles
               </p>
             )}
           </div>
@@ -160,7 +177,7 @@ const MarketData = () => {
       <button
         onClick={fetchData}
         disabled={loading}
-        className={`w-full font-mono text-sm tracking-widest py-4 transition-colors border border-border mt-4 ${
+        className={`w-full font-mono text-sm tracking-widest py-4 transition-colors border border-border mt-4 rounded-md ${
           loading
             ? "bg-muted text-muted-foreground cursor-not-allowed"
             : "bg-primary hover:bg-primary/80 text-primary-foreground"
@@ -206,7 +223,7 @@ const MarketData = () => {
                   <ComposedChart
                     data={data}
                     syncId="market"
-                    margin={{ top: 10, right: 30, bottom: 0, left: 10 }}
+                    margin={{ top: 10, right: 40, bottom: 0, left: 10 }} // more right margin for $ labels
                   >
                     <XAxis
                       dataKey="datetime"
@@ -222,12 +239,14 @@ const MarketData = () => {
 
                     <YAxis
                       domain={[domainMin, domainMax]}
+                      tickFormatter={formatPrice}
                       tick={{
                         fill: "hsl(216,15%,60%)",
-                        fontSize: 10,
+                        fontSize: 11,
                         fontFamily: "Roboto Mono",
                       }}
                       stroke="hsl(216,20%,28%)"
+                      width={50} // give more space for $xxx.xx
                       tickCount={8}
                     />
 
@@ -280,7 +299,7 @@ const MarketData = () => {
                   <BarChart
                     data={data}
                     syncId="market"
-                    margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
+                    margin={{ top: 0, right: 40, bottom: 0, left: 10 }}
                   >
                     <XAxis
                       dataKey="datetime"
@@ -295,12 +314,14 @@ const MarketData = () => {
                     />
 
                     <YAxis
+                      tickFormatter={(value) => value.toLocaleString()}
                       tick={{
                         fill: "hsl(216,15%,60%)",
                         fontSize: 10,
                         fontFamily: "Roboto Mono",
                       }}
                       stroke="hsl(216,20%,28%)"
+                      width={50}
                     />
 
                     <Tooltip content={<VolumeTooltip />} />
@@ -342,7 +363,7 @@ const MarketData = () => {
 };
 
 // ────────────────────────────────────────────────
-// The rest (CandleShape, CandlestickTooltip, VolumeTooltip, InputField) remains unchanged
+// The rest remains unchanged
 // ────────────────────────────────────────────────
 
 const CandleShape = (props: any) => {
@@ -415,10 +436,10 @@ const CandlestickTooltip = ({ active, payload }: any) => {
         {localTime}
       </p>
       <p className="font-medium">
-        O: {d.open.toFixed(2)} &nbsp; H: {d.high.toFixed(2)} &nbsp; L:{" "}
-        {d.low.toFixed(2)} &nbsp; C: {d.close.toFixed(2)}
+        O: ${d.open.toFixed(2)} &nbsp; H: ${d.high.toFixed(2)} &nbsp; L: $
+        {d.low.toFixed(2)} &nbsp; C: ${d.close.toFixed(2)}
       </p>
-      {d.candle_vwap && <p>VWAP: {d.candle_vwap.toFixed(2)}</p>}
+      {d.candle_vwap && <p>VWAP: ${d.candle_vwap.toFixed(2)}</p>}
     </div>
   );
 };
@@ -453,16 +474,15 @@ const InputField = ({
   onChange: (v: string) => void;
   type?: string;
 }) => (
-  <div>
-    <label className="font-mono text-xs text-muted-foreground tracking-widest block mb-1">
+  <div className="flex flex-col">
+    <label className="font-mono text-xs text-muted-foreground tracking-widest mb-1">
       {label}
     </label>
-
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-muted border border-border text-foreground font-mono text-sm px-3 py-2 focus:outline-none focus:border-primary"
+      className="h-10 bg-muted border border-border text-foreground font-mono text-sm px-3 rounded-md focus:outline-none focus:border-primary"
     />
   </div>
 );
