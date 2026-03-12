@@ -1,7 +1,15 @@
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "postgresql://execusim_user:password@localhost:5432/execusim"
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL is not set. Please configure your .env file.")
 
 engine = create_engine(
     DATABASE_URL,
