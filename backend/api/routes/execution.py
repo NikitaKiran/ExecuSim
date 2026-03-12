@@ -51,24 +51,22 @@ STRATEGY_MAP = {
 }
 
 
-
 def _build_parent_order(req, market_data) -> ParentOrder:
-
-    first_day = market_data.index[0].date()
-
     market_tz = pytz.timezone("US/Eastern")
 
-    # Interpret user input as market time
-    start_local = market_tz.localize(pd.Timestamp(f"{first_day} {req.start_time}"))
-    end_local = market_tz.localize(pd.Timestamp(f"{first_day} {req.end_time}"))
+    start_date = pd.to_datetime(req.data_start).date()
+    end_date   = pd.to_datetime(req.data_end).date()
 
-    # Convert to UTC (matches market_data index)
+    # Force regular market hours (9:30 – 16:00 ET)
+    start_local = market_tz.localize(pd.Timestamp(f"{start_date} 09:30:00"))
+    end_local   = market_tz.localize(pd.Timestamp(f"{end_date} 16:00:00"))
+
     start_time = start_local.astimezone(pytz.UTC)
-    end_time = end_local.astimezone(pytz.UTC)
+    end_time   = end_local.astimezone(pytz.UTC)
 
     return ParentOrder(
         ticker=req.ticker,
-        side=req.side,
+        side=req.side.upper(),
         quantity=req.quantity,
         start_time=start_time,
         end_time=end_time,
@@ -138,6 +136,10 @@ def _run_single_strategy(
         implementation_shortfall=round(shortfall, 2),
         total_filled_qty=total_qty,
     )
+    print("logs are: ")
+    print(df_logs)
+    print(f"arrival price is: {arrival_price}")
+    print(f"slippage is: {slippage}")
 
     log_entries = []
     for _, row in df_logs.iterrows():
@@ -186,6 +188,9 @@ def run_simulation(req: SimulationRequest, db: Session = Depends(get_db)):
     3. Generate strategy schedule
     4. Execute and compute cost metrics
     """
+
+    print("the requested data is: ")
+    print(req)
     try:
         market_data = get_market_data(
             ticker=req.ticker,
@@ -205,6 +210,7 @@ def run_simulation(req: SimulationRequest, db: Session = Depends(get_db)):
     result = _run_single_strategy(market_data, order, req.strategy)
 
     df_logs = result["df_logs"]
+    print(df_logs)
     experiment_id = save_experiment(
         db=db,
         order=order,
@@ -212,6 +218,7 @@ def run_simulation(req: SimulationRequest, db: Session = Depends(get_db)):
         metrics=result["metrics"],
         df_logs=df_logs,
     )
+
 
     response = SimulationResponse(
         order={
