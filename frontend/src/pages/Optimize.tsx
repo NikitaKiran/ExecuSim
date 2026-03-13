@@ -199,7 +199,7 @@ const Optimize = () => {
               <table className="w-full font-body text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    {["ARRIVAL PRICE", "AVG EXEC PRICE", "SLIPPAGE ($)", "SHORTFALL ($)", "TOTAL FILLED"].map((h) => (
+                    {["ARRIVAL PRICE", "AVG EXEC PRICE", "SLIPPAGE (BPS)", "SHORTFALL ($)", "TOTAL FILLED"].map((h) => (
                       <th key={h} className="text-left font-mono text-xs text-muted-foreground tracking-widest py-2 pr-4">{h}</th>
                     ))}
                   </tr>

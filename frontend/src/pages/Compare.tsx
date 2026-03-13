@@ -170,7 +170,7 @@ const Compare = () => {
                   {[
                     { label: "ARRIVAL PRICE", twap: twapMetrics.arrival_price, vwap: vwapMetrics.arrival_price },
                     { label: "AVG EXEC PRICE", twap: twapMetrics.average_execution_price, vwap: vwapMetrics.average_execution_price },
-                    { label: "SLIPPAGE ($)", twap: twapMetrics.slippage, vwap: vwapMetrics.slippage },
+                    { label: "SLIPPAGE (BPS)", twap: twapMetrics.slippage, vwap: vwapMetrics.slippage },
                     { label: "SHORTFALL ($)", twap: twapMetrics.implementation_shortfall, vwap: vwapMetrics.implementation_shortfall },
                     { label: "TOTAL FILLED", twap: twapMetrics.total_filled_qty, vwap: vwapMetrics.total_filled_qty },
                   ].map((row) => (
@@ -191,7 +191,7 @@ const Compare = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0" style={{ marginTop: -1 }}>
             <section className="border border-border bg-card p-6">
-              <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-4">SLIPPAGE ($)</h2>
+              <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-4">SLIPPAGE (BPS)</h2>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={slippageData}>
                   <XAxis dataKey="name" tick={{ fill: 'hsl(216,15%,60%)', fontSize: 10, fontFamily: 'Roboto Mono' }} stroke="hsl(216,20%,28%)" />

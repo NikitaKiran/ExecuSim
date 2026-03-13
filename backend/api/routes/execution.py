@@ -125,21 +125,21 @@ def _run_single_strategy(
     arrival_price = compute_arrival_price(market_reset, order.start_time)
     avg_price = compute_average_execution_price(df_logs)
     total_qty = int(df_logs["filled_qty"].sum())
-    slippage = compute_slippage(avg_price, arrival_price, order.side)
+    slippage_dollars_per_share = compute_slippage(avg_price, arrival_price, order.side)
     shortfall = compute_implementation_shortfall(avg_price, arrival_price, total_qty, order.side)
     df_logs = add_participation_rate(df_logs)
 
     metrics = CostMetrics(
         arrival_price=round(arrival_price, 4),
         average_execution_price=round(avg_price, 4),
-        slippage=round(slippage, 4),
+        slippage=round(slippage_dollars_per_share * 10000, 1),           # bps
+        slippage_dollars_per_share=round(slippage_dollars_per_share, 6),
         implementation_shortfall=round(shortfall, 2),
         total_filled_qty=total_qty,
     )
     print("logs are: ")
     print(df_logs)
     print(f"arrival price is: {arrival_price}")
-    print(f"slippage is: {slippage}")
 
     log_entries = []
     for _, row in df_logs.iterrows():

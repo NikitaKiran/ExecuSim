@@ -221,15 +221,15 @@ const Simulation = () => {
               EXECUTION SUMMARY
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <Metric label="ARRIVAL PRICE" value={`$${result.metrics.arrival_price?.toFixed(4) ?? "N/A"}`} />
-              <Metric label="AVG EXEC PRICE" value={`$${result.metrics.average_execution_price?.toFixed(4) ?? "N/A"}`} />
+              <Metric label="ARRIVAL PRICE" value={`$${result.metrics.arrival_price}`} />
+              <Metric label="AVG EXEC PRICE" value={`$${result.metrics.average_execution_price}`} />
               <Metric
                 label="SLIPPAGE (BPS)"
                 value={result.metrics.slippage ?? "N/A"}
                 color={result.metrics.slippage > 5 ? "text-signal-red" : "text-signal-green"}
               />
-              <Metric label="SHORTFALL" value={`$${result.metrics.implementation_shortfall?.toFixed(2) ?? "N/A"}`} />
-              <Metric label="TOTAL FILLED" value={result.metrics.total_filled_qty?.toLocaleString() ?? "N/A"} />
+              <Metric label="SHORTFALL" value={`$${result.metrics.implementation_shortfall}`} />
+              <Metric label="TOTAL FILLED" value={result.metrics.total_filled_qty} />
             </div>
           </section>
 

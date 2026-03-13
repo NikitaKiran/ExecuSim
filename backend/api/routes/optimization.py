@@ -183,13 +183,15 @@ def _run_with_params(params: dict, market_data: pd.DataFrame, order: ParentOrder
     arrival_price = compute_arrival_price(market_reset, order.start_time)
     avg_price = compute_average_execution_price(df_logs)
     total_qty = int(df_logs["filled_qty"].sum())
-    slippage = compute_slippage(avg_price, arrival_price, order.side)
+    slippage_dollars_per_share = compute_slippage(avg_price, arrival_price, order.side)
+
     shortfall = compute_implementation_shortfall(avg_price, arrival_price, total_qty, order.side)
 
     return CostMetrics(
         arrival_price=round(arrival_price, 4),
         average_execution_price=round(avg_price, 4),
-        slippage=round(slippage, 4),
+        slippage=round(slippage_dollars_per_share * 10000, 1),           # bps
+        slippage_dollars_per_share=round(slippage_dollars_per_share, 6),
         implementation_shortfall=round(shortfall, 2),
         total_filled_qty=total_qty,
     )
@@ -341,6 +343,10 @@ def evaluate_params(req: EvaluateParamsRequest):
 
     cost = _compute_cost(params, market_data, order)
     metrics = _run_with_params(params, market_data, order)
+
+    print("metrics are")
+
+    print(metrics)
 
     return EvaluateParamsResponse(
         parameters=params,
