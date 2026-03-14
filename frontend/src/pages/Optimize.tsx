@@ -2,19 +2,11 @@ import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 
-// Default: yesterday as end, 5 days before as start
-const today = new Date();
-const yesterday = new Date(today);
-yesterday.setDate(today.getDate() - 1);
-const fiveDaysAgo = new Date(today);
-fiveDaysAgo.setDate(today.getDate() - 5);
-const toISO = (d: Date) => d.toISOString().split("T")[0];
-
 const Optimize = () => {
   const [form, setForm] = useState({
     ticker: "AAPL", side: "BUY", quantity: "10000",
     startTime: "09:30", endTime: "16:00",
-    startDate: toISO(fiveDaysAgo), endDate: toISO(yesterday),
+    startDate: "", endDate: "",
     interval: "5m",
   });
   const [advanced, setAdvanced] = useState(false);
