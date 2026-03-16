@@ -14,6 +14,8 @@ if PROJECT_ROOT not in sys.path:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from firebase_admin_setup import initialize_firebase
+
 from api.models import HealthResponse
 from api.routes.data import router as data_router
 from api.routes.execution import router as execution_router
@@ -23,6 +25,8 @@ from api.routes.experiments import router as experiments_router
 # ==========================================
 # APP SETUP
 # ==========================================
+
+initialize_firebase()
 
 app = FastAPI(
     title="ExecuSim API",
@@ -40,10 +44,10 @@ def on_startup():
     from db.bootstrap import bootstrap_database
     bootstrap_database()
 
-# CORS — allow React frontend (Phase 8) to call the API
+# CORS — allow React frontend to call the API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Restrict in production
+    allow_origins=["http://localhost:5173"],  # Restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,7 +65,6 @@ app.include_router(experiments_router, prefix="/api")
 # ==========================================
 # ROOT & HEALTH
 # ==========================================
-
 
 @app.get("/", tags=["Root"])
 def root():

@@ -2,3 +2,4 @@ __pycache__/
 *.parquet
 venv/
 .env
+backend/serviceAccountKey.json

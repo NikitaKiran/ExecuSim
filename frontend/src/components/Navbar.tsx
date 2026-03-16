@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import LoginButton from "./LoginButton";
 
 const NAV_ITEMS = [
   { label: "MARKET DATA", path: "/market-data" },
@@ -36,6 +37,7 @@ const Navbar = () => {
             {item.label}
           </button>
         ))}
+        <LoginButton />
       </div>
     </nav>
   );
