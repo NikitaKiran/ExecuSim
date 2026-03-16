@@ -13,7 +13,7 @@ const toISO = (d: Date) => d.toISOString().split("T")[0];
 
 const Compare = () => {
   const [form, setForm] = useState({
-    ticker: "AAPL", side: "BUY", quantity: "10000",
+    ticker: "", side: "BUY", quantity: "10000",
     startTime: "09:30", endTime: "16:00",
     startDate: toISO(fiveDaysAgo), endDate: toISO(yesterday),
     interval: "5m",
@@ -24,12 +24,12 @@ const Compare = () => {
 
   const update = (key: string, val: string) => setForm((f) => ({ ...f, [key]: val }));
 
-  const validateMarketHours = (time: string): boolean => {
-    // US/Eastern market hours: 09:30 – 16:00
-    const [h, m] = time.split(":").map(Number);
-    const mins = h * 60 + m;
-    return mins >= 9 * 60 + 30 && mins <= 16 * 60; // 09:30 – 16:00
-  };
+  // const validateMarketHours = (time: string): boolean => {
+  //   // US/Eastern market hours: 09:30 – 16:00
+  //   const [h, m] = time.split(":").map(Number);
+  //   const mins = h * 60 + m;
+  //   return mins >= 9 * 60 + 30 && mins <= 16 * 60; // 09:30 – 16:00
+  // };
 
   const run = async () => {
     if (!form.ticker || !form.side || !form.quantity || !form.startDate || !form.endDate || !form.startTime || !form.endTime || !form.interval) {
@@ -37,10 +37,10 @@ const Compare = () => {
       return;
     }
 
-    if (!validateMarketHours(form.startTime) || !validateMarketHours(form.endTime)) {
-      setError("Start and end times must be within US market hours (09:30 – 16:00 ET).");
-      return;
-    }
+    // if (!validateMarketHours(form.startTime) || !validateMarketHours(form.endTime)) {
+    //   setError("Start and end times must be within US market hours (09:30 – 16:00 ET).");
+    //   return;
+    // }
 
     const startDT = new Date(`${form.startDate}T${form.startTime}`);
     const endDT = new Date(`${form.endDate}T${form.endTime}`);
@@ -107,19 +107,22 @@ const Compare = () => {
       <section className="border border-border bg-card p-6">
         <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-4">INPUT PARAMETERS</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
+<div>
             <label className="font-mono text-xs text-muted-foreground tracking-widest block mb-1">TICKER</label>
-            <select value={form.ticker} onChange={(e) => update("ticker", e.target.value)}
-              className="w-full h-[38px] bg-muted border border-border text-foreground font-mono text-sm px-3 py-2 focus:outline-none focus:border-primary">
-              <option value="AAPL">AAPL</option>
-            </select>
+            <input
+              type="text"
+              value={form.ticker}
+              onChange={(e) => update("ticker", e.target.value.toUpperCase())} // auto-uppercase for consistency
+              placeholder="e.g. AAPL, RELIANCE.NS, BTC-USD"
+              className="w-full h-[38px] bg-muted border border-border text-foreground font-mono text-sm px-3 py-2 focus:outline-none focus:border-primary rounded-md"
+            />
           </div>
           <SelectField label="SIDE" value={form.side} onChange={(v) => update("side", v)} options={["BUY", "SELL"]} />
           <Field label="QUANTITY" value={form.quantity} onChange={(v) => update("quantity", v)} type="number" />
           <Field label="START DATE" value={form.startDate} onChange={(v) => update("startDate", v)} type="date" />
           <Field label="END DATE" value={form.endDate} onChange={(v) => update("endDate", v)} type="date" />
-          <TimeWheelPicker label="START TIME" value={form.startTime} onChange={(v) => update("startTime", v)} minTime="09:30" maxTime="16:00" />
-          <TimeWheelPicker label="END TIME" value={form.endTime} onChange={(v) => update("endTime", v)} minTime="09:30" maxTime="16:00" />
+          <TimeWheelPicker label="START TIME" value={form.startTime} onChange={(v) => update("startTime", v)}/>
+          <TimeWheelPicker label="END TIME" value={form.endTime} onChange={(v) => update("endTime", v)}/>
           <SelectField label="INTERVAL" value={form.interval} onChange={(v) => update("interval", v)} options={["1m", "5m", "15m", "1h"]} />
         </div>
       </section>
@@ -191,7 +194,24 @@ const Compare = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0" style={{ marginTop: -1 }}>
             <section className="border border-border bg-card p-6">
-              <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-4">SLIPPAGE (BPS)</h2>
+             <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-2">SLIPPAGE (BPS)</h2>
+<div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 p-2 bg-muted/40 rounded-md border border-border/50">
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-4 rounded-sm" style={{ backgroundColor: "hsl(4,90%,61%)" }} />
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-red-400 font-semibold">TWAP</span> — slippage cost using time-based equal slices
+    </span>
+  </div>
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-4 rounded-sm" style={{ backgroundColor: "hsl(152,100%,39%)" }} />
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-green-400 font-semibold">VWAP</span> — slippage cost using volume-weighted slices
+    </span>
+  </div>
+  <p className="w-full font-mono text-xs text-muted-foreground/70">
+    Lower is better — slippage measures how far your average execution price was from the price when the order was placed (in basis points, 1 bps = 0.01%)
+  </p>
+</div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={slippageData}>
                   <XAxis dataKey="name" tick={{ fill: 'hsl(216,15%,60%)', fontSize: 10, fontFamily: 'Roboto Mono' }} stroke="hsl(216,20%,28%)" />
@@ -207,7 +227,24 @@ const Compare = () => {
             </section>
 
             <section className="border border-border bg-card p-6" style={{ marginLeft: -1 }}>
-              <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-4">SHORTFALL ($)</h2>
+              <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-2">SHORTFALL ($)</h2>
+<div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 p-2 bg-muted/40 rounded-md border border-border/50">
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-4 rounded-sm" style={{ backgroundColor: "hsl(4,90%,61%)" }} />
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-red-400 font-semibold">TWAP</span> — total dollar cost lost vs ideal execution
+    </span>
+  </div>
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-4 rounded-sm" style={{ backgroundColor: "hsl(152,100%,39%)" }} />
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-green-400 font-semibold">VWAP</span> — total dollar cost lost vs ideal execution
+    </span>
+  </div>
+  <p className="w-full font-mono text-xs text-muted-foreground/70">
+    Lower is better — implementation shortfall is the total extra cost ($) paid compared to if the entire order had filled instantly at the arrival price
+  </p>
+</div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={shortfallData}>
                   <XAxis dataKey="name" tick={{ fill: 'hsl(216,15%,60%)', fontSize: 10, fontFamily: 'Roboto Mono' }} stroke="hsl(216,20%,28%)" />

@@ -13,7 +13,7 @@ import {
 } from "recharts";
 
 const MarketData = () => {
-  const [ticker, setTicker] = useState("AAPL");
+  const [ticker, setTicker] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [interval, setInterval] = useState("1d");
@@ -103,19 +103,19 @@ const MarketData = () => {
           INPUT PARAMETERS
         </h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Ticker */}
+       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Ticker – changed to text input */}
           <div className="flex flex-col">
             <label className="font-mono text-xs text-muted-foreground tracking-widest mb-1">
               TICKER
             </label>
-            <select
+            <input
+              type="text"
               value={ticker}
-              onChange={(e) => setTicker(e.target.value)}
+              onChange={(e) => setTicker(e.target.value.toUpperCase())} // auto-uppercase
+              placeholder="e.g. AAPL, RELIANCE.NS, BTC-USD"
               className="h-10 bg-muted border border-border text-foreground font-mono text-sm px-3 rounded-md focus:outline-none focus:border-primary"
-            >
-              <option value="AAPL">AAPL</option>
-            </select>
+            />
           </div>
 
           {/* Start Date */}
@@ -209,13 +209,37 @@ const MarketData = () => {
         <>
           <section className="border border-border bg-card p-6 mt-6">
             <div className="flex justify-between items-center mb-2">
-              <h2 className="font-mono text-xs tracking-widest text-muted-foreground">
-                OHLC CANDLESTICK CHART
-              </h2>
-              <span className="text-xs text-muted-foreground/80 font-mono">
-                Times shown in your local time (IST)
-              </span>
-            </div>
+  <h2 className="font-mono text-xs tracking-widest text-muted-foreground">
+    OHLC CANDLESTICK CHART
+  </h2>
+  <span className="text-xs text-muted-foreground/80 font-mono">
+    Times shown in your local time (IST)
+  </span>
+</div>
+<div className="flex flex-wrap gap-x-6 gap-y-2 mb-3 p-3 bg-muted/40 rounded-md border border-border/50">
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-4 rounded-sm" style={{ backgroundColor: "hsl(152,100%,39%)" }} />
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-green-400 font-semibold">Green candle</span> — price rose (closed higher than it opened)
+    </span>
+  </div>
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-4 rounded-sm" style={{ backgroundColor: "hsl(4,90%,61%)" }} />
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-red-400 font-semibold">Red candle</span> — price fell (closed lower than it opened)
+    </span>
+  </div>
+  <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center justify-center w-3 gap-0">
+      <div className="w-px h-1.5 bg-muted-foreground/70" />
+      <div className="w-3 h-2 rounded-sm bg-muted-foreground/50" />
+      <div className="w-px h-1.5 bg-muted-foreground/70" />
+    </div>
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-foreground font-semibold">Thin wick lines</span> — the highest and lowest price reached during that period
+    </span>
+  </div>
+</div>
 
             <div style={{ overflowX: "auto" }}>
               <div style={{ width: Math.max(data.length * 14, 800) }}>
@@ -284,14 +308,36 @@ const MarketData = () => {
             className="border border-border bg-card p-6"
             style={{ marginTop: -1 }}
           >
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="font-mono text-xs tracking-widest text-muted-foreground">
-                VOLUME
-              </h2>
-              <span className="text-xs text-muted-foreground/80 font-mono">
-                Times shown in your local time (IST)
-              </span>
-            </div>
+          <div className="flex justify-between items-center mb-2">
+  <h2 className="font-mono text-xs tracking-widest text-muted-foreground">
+    VOLUME
+  </h2>
+  <span className="text-xs text-muted-foreground/80 font-mono">
+    Times shown in your local time (IST)
+  </span>
+</div>
+<div className="flex flex-wrap gap-x-6 gap-y-2 mb-3 p-3 bg-muted/40 rounded-md border border-border/50">
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-4 rounded-sm" style={{ backgroundColor: "hsl(152,100%,39%)" }} />
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-green-400 font-semibold">Green bar</span> — more buying activity (price closed higher than open)
+    </span>
+  </div>
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-4 rounded-sm" style={{ backgroundColor: "hsl(4,90%,61%)" }} />
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-red-400 font-semibold">Red bar</span> — more selling activity (price closed lower than open)
+    </span>
+  </div>
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-4 bg-muted-foreground/30 rounded-sm flex items-end justify-center pb-0.5">
+      <div className="w-2 h-2 rounded-sm bg-muted-foreground/60" />
+    </div>
+    <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-foreground font-semibold">Bar height</span> — total number of shares / contracts traded in that period
+    </span>
+  </div>
+</div>
 
             <div style={{ overflowX: "auto" }}>
               <div style={{ width: Math.max(data.length * 14, 800) }}>

@@ -4,7 +4,7 @@ import TimeWheelPicker from "@/components/TimeWheelPicker";
 
 const Evaluate = () => {
   const [form, setForm] = useState({
-    ticker: "AAPL",
+    ticker: "",
     side: "Buy",
     quantity: "100000",
     startDate: "",
@@ -122,7 +122,7 @@ const Evaluate = () => {
 
         {/* Order Details — same layout style as Simulation.tsx */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Field label="TICKER" value={form.ticker} onChange={(v) => update("ticker", v)} />
+          <Field label="TICKER" value={form.ticker} placeholder="e.g. AAPL, RELIANCE.NS, BTC-USD" onChange={(v) => update("ticker", v)} />
           <SelectField label="SIDE" value={form.side} onChange={(v) => update("side", v)} options={["Buy", "Sell"]} />
           <Field label="QUANTITY" value={form.quantity} onChange={(v) => update("quantity", v)} type="number" />
           <SelectField
@@ -135,8 +135,8 @@ const Evaluate = () => {
           <Field label="START DATE" value={form.startDate} onChange={(v) => update("startDate", v)} type="date" />
           <Field label="END DATE" value={form.endDate} onChange={(v) => update("endDate", v)} type="date" />
 
-          <TimeWheelPicker label="START TIME" value={form.startTime} onChange={(v) => update("startTime", v)} minTime="09:30" maxTime="16:00" />
-          <TimeWheelPicker label="END TIME" value={form.endTime} onChange={(v) => update("endTime", v)} minTime="09:30" maxTime="16:00" />
+          <TimeWheelPicker label="START TIME" value={form.startTime} onChange={(v) => update("startTime", v)}/>
+          <TimeWheelPicker label="END TIME" value={form.endTime} onChange={(v) => update("endTime", v)} />
         </div>
 
        {/* Strategy Tuning Parameters */}
@@ -266,13 +266,14 @@ const Evaluate = () => {
 };
 
 /* Reusable components — copied exactly from Simulation.tsx for consistency */
-const Field = ({ label, value, onChange, type = "text" }: any) => (
+const Field = ({ label, value, onChange, placeholder,type = "text" }: any) => (
   <div className="flex flex-col">
     <label className="font-mono text-xs text-muted-foreground tracking-widest mb-1">{label}</label>
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
       className="h-10 bg-muted border border-border text-foreground font-mono text-sm px-3 rounded-md focus:outline-none focus:border-primary"
     />
   </div>

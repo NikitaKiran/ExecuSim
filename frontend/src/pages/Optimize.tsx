@@ -12,7 +12,7 @@ const toISO = (d: Date) => d.toISOString().split("T")[0];
 
 const Optimize = () => {
   const [form, setForm] = useState({
-    ticker: "AAPL", side: "BUY", quantity: "10000",
+    ticker: "", side: "BUY", quantity: "10000",
     startTime: "09:30", endTime: "16:00",
     startDate: toISO(fiveDaysAgo), endDate: toISO(yesterday),
     interval: "5m",
@@ -28,11 +28,11 @@ const Optimize = () => {
   const update = (key: string, val: string) => setForm((f) => ({ ...f, [key]: val }));
   const updateGa = (key: string, val: string) => setGaSettings((f) => ({ ...f, [key]: val }));
 
-  const validateMarketHours = (time: string): boolean => {
-    const [h, m] = time.split(":").map(Number);
-    const mins = h * 60 + m;
-    return mins >= 9 * 60 + 30 && mins <= 16 * 60;
-  };
+  // const validateMarketHours = (time: string): boolean => {
+  //   const [h, m] = time.split(":").map(Number);
+  //   const mins = h * 60 + m;
+  //   return mins >= 9 * 60 + 30 && mins <= 16 * 60;
+  // };
 
   const run = async () => {
     if (!form.ticker || !form.side || !form.quantity || !form.startDate || !form.endDate || !form.startTime || !form.endTime || !form.interval) {
@@ -40,10 +40,10 @@ const Optimize = () => {
       return;
     }
 
-    if (!validateMarketHours(form.startTime) || !validateMarketHours(form.endTime)) {
-      setError("Start and end times must be within US market hours (09:30 – 16:00 ET).");
-      return;
-    }
+    // if (!validateMarketHours(form.startTime) || !validateMarketHours(form.endTime)) {
+    //   setError("Start and end times must be within US market hours (09:30 – 16:00 ET).");
+    //   return;
+    // }
 
     const startDT = new Date(`${form.startDate}T${form.startTime}`);
     const endDT = new Date(`${form.endDate}T${form.endTime}`);
@@ -106,42 +106,71 @@ const Optimize = () => {
       <section className="border border-border bg-card p-6">
         <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-4">INPUT PARAMETERS</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
+         <div>
             <label className="font-mono text-xs text-muted-foreground tracking-widest block mb-1">TICKER</label>
-            <select value={form.ticker} onChange={(e) => update("ticker", e.target.value)}
-              className="w-full h-[38px] bg-muted border border-border text-foreground font-mono text-sm px-3 py-2 focus:outline-none focus:border-primary">
-              <option value="AAPL">AAPL</option>
-            </select>
+            <input
+              type="text"
+              value={form.ticker}
+              onChange={(e) => update("ticker", e.target.value.toUpperCase())} // auto-uppercase for consistency
+              placeholder="e.g. AAPL, RELIANCE.NS, BTC-USD"
+              className="w-full h-[38px] bg-muted border border-border text-foreground font-mono text-sm px-3 py-2 focus:outline-none focus:border-primary rounded-md"
+            />
           </div>
           <SelectField label="SIDE" value={form.side} onChange={(v) => update("side", v)} options={["BUY", "SELL"]} />
           <Field label="QUANTITY" value={form.quantity} onChange={(v) => update("quantity", v)} type="number" />
           <Field label="START DATE" value={form.startDate} onChange={(v) => update("startDate", v)} type="date" />
           <Field label="END DATE" value={form.endDate} onChange={(v) => update("endDate", v)} type="date" />
-          <TimeWheelPicker label="START TIME" value={form.startTime} onChange={(v) => update("startTime", v)} minTime="09:30" maxTime="16:00" />
-          <TimeWheelPicker label="END TIME" value={form.endTime} onChange={(v) => update("endTime", v)} minTime="09:30" maxTime="16:00" />
+          <TimeWheelPicker label="START TIME" value={form.startTime} onChange={(v) => update("startTime", v)} />
+          <TimeWheelPicker label="END TIME" value={form.endTime} onChange={(v) => update("endTime", v)} />
           <SelectField label="INTERVAL" value={form.interval} onChange={(v) => update("interval", v)} options={["1m", "5m", "15m", "1h"]} />
         </div>
       </section>
+<section className="border border-border bg-card p-6" style={{ marginTop: -1 }}>
+  <label className="flex items-center gap-3 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={advanced}
+      onChange={(e) => setAdvanced(e.target.checked)}
+      className="w-4 h-4 accent-primary bg-muted border-border"
+    />
+    <span className="font-mono text-xs tracking-widest text-muted-foreground">ADVANCED OPTIMIZATION (GA SETTINGS)</span>
+  </label>
 
-      <section className="border border-border bg-card p-6" style={{ marginTop: -1 }}>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={advanced}
-            onChange={(e) => setAdvanced(e.target.checked)}
-            className="w-4 h-4 accent-primary bg-muted border-border"
-          />
-          <span className="font-mono text-xs tracking-widest text-muted-foreground">ADVANCED OPTIMIZATION (GA SETTINGS)</span>
-        </label>
+  {advanced && (
+    <>
+      {/* Parameter guide */}
+      <div className="mt-4 p-3 bg-muted/40 rounded-md border border-border/50 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <p className="font-mono text-xs text-primary font-semibold mb-1">POPULATION SIZE</p>
+          <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+            How many different strategy combinations the algorithm tries in each round.
+            <span className="block mt-1 text-muted-foreground/70">Higher = more thorough search, but slower. <br />Recommended: 20–50</span>
+          </p>
+        </div>
+        <div>
+          <p className="font-mono text-xs text-primary font-semibold mb-1">GENERATIONS</p>
+          <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+            How many rounds of evolution the algorithm runs — each round it refines and improves on the best strategies found so far.
+            <span className="block mt-1 text-muted-foreground/70">Higher = better result, but slower. <br />Recommended: 15–30</span>
+          </p>
+        </div>
+        <div>
+          <p className="font-mono text-xs text-primary font-semibold mb-1">SEED (OPTIONAL)</p>
+          <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+            A starting number for the random process — setting the same seed gives you the exact same result every time you run it, useful for reproducibility.
+            <span className="block mt-1 text-muted-foreground/70">Leave blank for a random run each time. <br />Example: 42</span>
+          </p>
+        </div>
+      </div>
 
-        {advanced && (
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            <Field label="POPULATION SIZE" value={gaSettings.populationSize} onChange={(v) => updateGa("populationSize", v)} type="number" />
-            <Field label="GENERATIONS" value={gaSettings.generations} onChange={(v) => updateGa("generations", v)} type="number" />
-            <Field label="SEED (OPTIONAL)" value={gaSettings.seed} onChange={(v) => updateGa("seed", v)} type="number" />
-          </div>
-        )}
-      </section>
+      <div className="grid grid-cols-3 gap-4 mt-4">
+        <Field label="POPULATION SIZE" value={gaSettings.populationSize} onChange={(v) => updateGa("populationSize", v)} type="number" />
+        <Field label="GENERATIONS" value={gaSettings.generations} onChange={(v) => updateGa("generations", v)} type="number" />
+        <Field label="SEED (OPTIONAL)" value={gaSettings.seed} onChange={(v) => updateGa("seed", v)} type="number" />
+      </div>
+    </>
+  )}
+</section>
 
       <button
         onClick={run}
