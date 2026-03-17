@@ -39,6 +39,7 @@ from fastapi import Depends
 
 from db.database import get_db
 from db.repository import save_experiment
+from api.auth import verify_firebase_token
 
 router = APIRouter(prefix="/optimization", tags=["Optimization"])
 
@@ -220,7 +221,11 @@ def list_optimization_params():
 
 
 @router.post("/optimize")
-def run_optimization(req: OptimizationRequest, db: Session = Depends(get_db)):
+def run_optimization(
+    req: OptimizationRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(verify_firebase_token),  #auth 
+):
     """
     Run the Genetic Algorithm optimizer to find the best VWAP parameters
     (slice_frequency, volume_participation_cap, aggressiveness) that minimize
@@ -312,7 +317,10 @@ def run_optimization(req: OptimizationRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/evaluate", response_model=EvaluateParamsResponse)
-def evaluate_params(req: EvaluateParamsRequest):
+def evaluate_params(
+    req: EvaluateParamsRequest,
+    user: dict = Depends(verify_firebase_token),  #auth 
+):
     """
     Evaluate a specific set of VWAP parameters without running the full GA.
     Useful for manual exploration or validating optimizer results.

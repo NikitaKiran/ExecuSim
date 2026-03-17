@@ -38,6 +38,7 @@ from fastapi import Depends
 
 from db.database import get_db
 from db.repository import save_experiment
+from api.auth import verify_firebase_token
 
 router = APIRouter(prefix="/execution", tags=["Execution"])
 
@@ -178,7 +179,11 @@ def list_strategies():
 
 
 @router.post("/simulate")
-def run_simulation(req: SimulationRequest, db: Session = Depends(get_db)):
+def run_simulation(
+    req: SimulationRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(verify_firebase_token),  #auth
+):
     """
     Run an execution simulation for a single strategy.
 
@@ -239,7 +244,10 @@ def run_simulation(req: SimulationRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/compare", response_model=CompareResponse)
-def compare_strategies(req: CompareRequest):
+def compare_strategies(
+    req: CompareRequest,
+    user: dict = Depends(verify_firebase_token),  #auth
+):
     """
     Compare TWAP and VWAP on the same parent order.
     Returns metrics for both and a recommendation.

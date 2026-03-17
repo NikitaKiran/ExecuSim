@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
+import { apiFetch } from "@/lib/api";
 
 import {
   ComposedChart,
@@ -62,7 +63,7 @@ const Simulation = () => {
 
       console.log("Sending payload:", payload);
 
-      const response = await fetch("http://localhost:8000/api/execution/simulate", {
+      const response = await apiFetch("/api/execution/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

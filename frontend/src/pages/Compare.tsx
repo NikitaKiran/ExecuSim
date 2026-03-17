@@ -2,6 +2,7 @@ import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { apiFetch } from "@/lib/api";
 
 const Compare = () => {
   const [form, setForm] = useState({
@@ -46,7 +47,7 @@ const Compare = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/execution/compare", {
+      const response = await apiFetch("/api/execution/compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

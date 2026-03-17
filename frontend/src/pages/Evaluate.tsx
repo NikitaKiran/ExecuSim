@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
+import { apiFetch } from "@/lib/api";
 
 const Evaluate = () => {
   const [form, setForm] = useState({
@@ -71,9 +72,8 @@ const Evaluate = () => {
 
       console.log("Sending payload to /evaluate:", payload);
 
-      const response = await fetch("http://localhost:8000/api/optimization/evaluate", {
+      const response = await apiFetch("/api/optimization/evaluate", {  // <-- changed
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 

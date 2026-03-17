@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
+import { apiFetch } from "@/lib/api";
 
 const Optimize = () => {
   const [form, setForm] = useState({
@@ -66,9 +67,8 @@ const Optimize = () => {
         if (gaSettings.seed) body.seed = parseInt(gaSettings.seed);
       }
 
-      const response = await fetch("http://localhost:8000/api/optimization/optimize", {
+      const response = await apiFetch("/api/optimization/optimize", {  // <-- changed
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
