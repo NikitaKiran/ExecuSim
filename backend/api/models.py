@@ -206,3 +206,12 @@ class OperationsExplainResponse(BaseModel):
     answer: str
     operation_ids: List[str]
     model: str
+
+
+class OperationExplanationHistoryItem(BaseModel):
+    id: str
+    mode: Literal["summary", "question"]
+    question: Optional[str] = None
+    answer: str
+    created_at: datetime
+    operation_ids: List[str]

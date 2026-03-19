@@ -12,6 +12,15 @@ type OperationRecord = {
   response_payload: Record<string, any>;
 };
 
+type SummaryHistoryItem = {
+  id: string;
+  mode: "summary" | "question";
+  question?: string | null;
+  answer: string;
+  created_at: string;
+  operation_ids: string[];
+};
+
 const prettyType = (raw: string) => raw.replace(/_/g, " ").toUpperCase();
 
 const typeBadgeClass = (raw: string) => {
@@ -39,14 +48,23 @@ const jsonToPrettyText = (value: unknown): string => {
   }
 };
 
+const truncateText = (value: string, maxChars = 280): string => {
+  if (value.length <= maxChars) return value;
+  return `${value.slice(0, maxChars)}...`;
+};
+
 const OperationsJournal = () => {
   const [operations, setOperations] = useState<OperationRecord[]>([]);
+  const [summaryHistory, setSummaryHistory] = useState<SummaryHistoryItem[]>([]);
+  const [expandedSummaryIds, setExpandedSummaryIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [activeOperationId, setActiveOperationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchOperations = async () => {
@@ -74,8 +92,34 @@ const OperationsJournal = () => {
     }
   };
 
+  const fetchSummaryHistory = async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    try {
+      const response = await apiFetch("/api/explainability/operations/history?mode=summary&limit=100");
+      if (!response.ok) {
+        let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        try {
+          const err = await response.json();
+          errorMessage = err.detail || err.message || errorMessage;
+        } catch {
+          // Keep default message.
+        }
+        throw new Error(errorMessage);
+      }
+
+      const payload = (await response.json()) as SummaryHistoryItem[];
+      setSummaryHistory(Array.isArray(payload) ? payload : []);
+    } catch (err: any) {
+      setSummaryError(err.message || "Failed to load summary history.");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchOperations();
+    fetchSummaryHistory();
   }, []);
 
   const operationTypes = useMemo(() => {
@@ -124,6 +168,12 @@ const OperationsJournal = () => {
     const merged = new Set(selectedIds);
     filteredOperations.forEach((op) => merged.add(op.id));
     setSelectedIds(Array.from(merged));
+  };
+
+  const toggleSummaryExpanded = (id: string) => {
+    setExpandedSummaryIds((curr) =>
+      curr.includes(id) ? curr.filter((item) => item !== id) : [...curr, id]
+    );
   };
 
   return (
@@ -309,6 +359,79 @@ const OperationsJournal = () => {
         operationIds={selectedIds}
         title="EXPLAIN SELECTED OPERATIONS"
       />
+
+      <section className="border border-border bg-card p-6 mt-6 rounded-md">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+          <h2 className="font-mono text-xs tracking-widest text-muted-foreground">
+            PREVIOUS SUMMARY OPERATIONS
+          </h2>
+          <button
+            onClick={fetchSummaryHistory}
+            disabled={summaryLoading}
+            className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
+          >
+            {summaryLoading ? "REFRESHING..." : "REFRESH"}
+          </button>
+        </div>
+
+        {summaryError && (
+          <div className="border border-red-500/40 bg-red-950/20 p-4 rounded-md mb-4">
+            <p className="text-red-400 font-mono text-xs">ERROR: {summaryError}</p>
+          </div>
+        )}
+
+        {!summaryLoading && summaryHistory.length === 0 && !summaryError && (
+          <div className="border border-border/70 bg-muted/30 p-4 rounded-md">
+            <p className="font-mono text-xs text-muted-foreground">
+              No saved summaries yet. Generate one from the panel above and it will appear here.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {summaryHistory.map((item) => {
+            const expanded = expandedSummaryIds.includes(item.id);
+            const hasLinkedOperation = item.operation_ids.some((id) => operations.some((op) => op.id === id));
+
+            return (
+              <article key={item.id} className="border border-border/70 rounded-md p-4 bg-muted/20">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                  <p className="font-mono text-xs text-muted-foreground tracking-widest">
+                    {new Date(item.created_at).toLocaleString()}
+                  </p>
+                  <p className="font-mono text-[11px] text-muted-foreground">
+                    {item.operation_ids.length} linked operation{item.operation_ids.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+
+                <p className="font-body text-sm whitespace-pre-wrap leading-relaxed">
+                  {expanded ? item.answer : truncateText(item.answer)}
+                </p>
+
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    onClick={() => toggleSummaryExpanded(item.id)}
+                    className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted"
+                  >
+                    {expanded ? "SHOW LESS" : "SHOW FULL SUMMARY"}
+                  </button>
+                  {hasLinkedOperation && (
+                    <button
+                      onClick={() => {
+                        const availableIds = item.operation_ids.filter((id) => operations.some((op) => op.id === id));
+                        setSelectedIds((curr) => Array.from(new Set([...curr, ...availableIds])));
+                      }}
+                      className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted"
+                    >
+                      SELECT LINKED OPS
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
     </PageLayout>
   );
 };

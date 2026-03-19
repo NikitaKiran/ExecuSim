@@ -117,6 +117,14 @@ def save_operation_record(
     return record
 
 
+def list_operation_explanations(db: Session, mode: str | None = None, limit: int = 100):
+    query = db.query(OperationExplanation)
+    if mode:
+        query = query.filter(OperationExplanation.mode == mode)
+
+    return query.order_by(OperationExplanation.created_at.desc()).limit(limit).all()
+
+
 def list_operation_records(db: Session, limit: int = 200):
     return (
         db.query(OperationRecord)

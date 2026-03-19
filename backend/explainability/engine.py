@@ -8,9 +8,9 @@ import google.generativeai as genai
 from sqlalchemy.orm import Session
 
 from db.repository import (
+    deserialize_payload,
     get_operation_records_by_ids,
     save_operation_explanation,
-    deserialize_payload,
 )
 
 
@@ -85,14 +85,14 @@ def explain_operations(
             "Structure the summary as:\n"
             "1) What was run\n"
             "2) Key outcomes and metrics and analysis\n"
-            "4) Suggested next action\n\n"
+            "3) Suggested next action\n\n"
             "Operations context:\n"
             f"{context_text}"
         )
     else:
         prompt = (
             "You are an execution analytics assistant. "
-            "Answer the user's question using ONLY the operations context below. "
+            "Answer the user's question in detail using ONLY the operations context below. "
             "If information is missing, state that clearly and do not invent details.\n\n"
             f"User question: {question.strip()}\n\n"
             "Operations context:\n"
