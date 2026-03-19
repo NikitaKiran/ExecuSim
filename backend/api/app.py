@@ -24,6 +24,8 @@ from api.routes.data import router as data_router
 from api.routes.execution import router as execution_router
 from api.routes.optimization import router as optimization_router
 from api.routes.experiments import router as experiments_router
+from api.routes.explainability import router as explainability_router
+from api.routes.operations import router as operations_router
 
 # ==========================================
 # APP SETUP
@@ -50,7 +52,7 @@ def on_startup():
 # CORS — allow React frontend to call the API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Restrict in production
+    allow_origins=["http://localhost:5173","http://localhost:8080"],  # Restrict in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,6 +66,8 @@ app.include_router(data_router, prefix="/api")
 app.include_router(execution_router, prefix="/api")
 app.include_router(optimization_router, prefix="/api")
 app.include_router(experiments_router, prefix="/api")
+app.include_router(explainability_router, prefix="/api")
+app.include_router(operations_router, prefix="/api")
 
 # ==========================================
 # ROOT & HEALTH

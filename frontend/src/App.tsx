@@ -11,9 +11,9 @@ import Simulation from "./pages/Simulation.tsx";
 import Compare from "./pages/Compare.tsx";
 import Optimize from "./pages/Optimize.tsx";
 import Evaluate from "./pages/Evaluate.tsx";
+import OperationsJournal from "./pages/OperationsJournal.tsx";
 
 import ProtectedRoute from "./components/ProtectedRoute";
-import Navbar from "./components/Navbar";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +57,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Evaluate />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/operations-journal"
+              element={
+                <ProtectedRoute>
+                  <OperationsJournal />
                 </ProtectedRoute>
               }
             />

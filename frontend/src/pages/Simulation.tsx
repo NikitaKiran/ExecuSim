@@ -2,6 +2,7 @@ import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 import { apiFetch } from "@/lib/api";
+import OperationExplainPanel from "@/components/OperationExplainPanel";
 
 import {
   ComposedChart,
@@ -382,6 +383,10 @@ const Simulation = () => {
               Low values (e.g. 0.036%) are normal for small orders in high-volume stocks like AAPL.
             </p> */}
           </section>
+
+          {result.operation_id && (
+            <OperationExplainPanel operationIds={[result.operation_id]} />
+          )}
         </>
       )}
 

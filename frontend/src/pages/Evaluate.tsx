@@ -2,6 +2,7 @@ import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 import { apiFetch } from "@/lib/api";
+import OperationExplainPanel from "@/components/OperationExplainPanel";
 
 const Evaluate = () => {
   const [form, setForm] = useState({
@@ -100,6 +101,7 @@ const Evaluate = () => {
         implementation_shortfall: data.metrics.implementation_shortfall,
         slippage_bps: data.metrics.slippage,
         avg_execution_price: data.metrics.average_execution_price,
+        operation_id: data.operation_id,
       });
 
     } catch (err: any) {
@@ -223,35 +225,41 @@ const Evaluate = () => {
       )}
 
       {result ? (
-        <section className="border border-border bg-card p-6 mt-6">
-          <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-4">
-            EVALUATION RESULTS
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full font-body text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  {["COST ($)", "IMPL. SHORTFALL ($)", "SLIPPAGE (BPS)", "AVG EXEC PRICE"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left font-mono text-xs text-muted-foreground tracking-widest py-2 pr-4"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-border/50">
-                  <td className="py-2 pr-4 font-mono">${result.cost?.toLocaleString() ?? "—"}</td>
-                  <td className="py-2 pr-4 font-mono">${result.implementation_shortfall?.toLocaleString(undefined, { minimumFractionDigits: 2 }) ?? "—"}</td>
-                  <td className="py-2 pr-4 font-mono text-signal-green">{result.slippage_bps} bps</td>
-                  <td className="py-2 pr-4 font-mono">${result.avg_execution_price}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <>
+          <section className="border border-border bg-card p-6 mt-6">
+            <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-4">
+              EVALUATION RESULTS
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full font-body text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    {["COST ($)", "IMPL. SHORTFALL ($)", "SLIPPAGE (BPS)", "AVG EXEC PRICE"].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left font-mono text-xs text-muted-foreground tracking-widest py-2 pr-4"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-border/50">
+                    <td className="py-2 pr-4 font-mono">${result.cost?.toLocaleString() ?? "—"}</td>
+                    <td className="py-2 pr-4 font-mono">${result.implementation_shortfall?.toLocaleString(undefined, { minimumFractionDigits: 2 }) ?? "—"}</td>
+                    <td className="py-2 pr-4 font-mono text-signal-green">{result.slippage_bps} bps</td>
+                    <td className="py-2 pr-4 font-mono">${result.avg_execution_price}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {result.operation_id && (
+            <OperationExplainPanel operationIds={[result.operation_id]} />
+          )}
+        </>
       ) : (
         !loading && (
           <section className="border border-border bg-muted p-12 text-center mt-6">
