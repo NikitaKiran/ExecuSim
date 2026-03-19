@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import OperationExplainPanel from "@/components/OperationExplainPanel";
 import { apiFetch } from "@/lib/api";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type OperationRecord = {
   id: string;
@@ -20,6 +22,8 @@ type SummaryHistoryItem = {
   created_at: string;
   operation_ids: string[];
 };
+
+const HISTORY_PAGE_SIZE = 3;
 
 const prettyType = (raw: string) => raw.replace(/_/g, " ").toUpperCase();
 
@@ -48,15 +52,11 @@ const jsonToPrettyText = (value: unknown): string => {
   }
 };
 
-const truncateText = (value: string, maxChars = 280): string => {
-  if (value.length <= maxChars) return value;
-  return `${value.slice(0, maxChars)}...`;
-};
-
 const OperationsJournal = () => {
   const [operations, setOperations] = useState<OperationRecord[]>([]);
-  const [summaryHistory, setSummaryHistory] = useState<SummaryHistoryItem[]>([]);
+  const [historyItems, setHistoryItems] = useState<SummaryHistoryItem[]>([]);
   const [expandedSummaryIds, setExpandedSummaryIds] = useState<string[]>([]);
+  const [expandedLinkedIds, setExpandedLinkedIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
@@ -65,7 +65,9 @@ const OperationsJournal = () => {
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [historyPage, setHistoryPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const detailsSectionRef = useRef<HTMLElement | null>(null);
 
   const fetchOperations = async () => {
     setLoading(true);
@@ -96,7 +98,7 @@ const OperationsJournal = () => {
     setSummaryLoading(true);
     setSummaryError(null);
     try {
-      const response = await apiFetch("/api/explainability/operations/history?mode=summary&limit=100");
+      const response = await apiFetch("/api/explainability/operations/history?limit=100");
       if (!response.ok) {
         let errorMessage = `Server error: ${response.status} ${response.statusText}`;
         try {
@@ -109,7 +111,8 @@ const OperationsJournal = () => {
       }
 
       const payload = (await response.json()) as SummaryHistoryItem[];
-      setSummaryHistory(Array.isArray(payload) ? payload : []);
+      setHistoryItems(Array.isArray(payload) ? payload : []);
+      setHistoryPage(0);
     } catch (err: any) {
       setSummaryError(err.message || "Failed to load summary history.");
     } finally {
@@ -154,6 +157,25 @@ const OperationsJournal = () => {
     return operations.find((op) => op.id === activeOperationId) ?? null;
   }, [activeOperationId, operations]);
 
+  useEffect(() => {
+    if (!activeOperation || !detailsSectionRef.current) return;
+    detailsSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [activeOperation]);
+
+  const pagedHistoryItems = useMemo(() => {
+    const start = historyPage * HISTORY_PAGE_SIZE;
+    return historyItems.slice(start, start + HISTORY_PAGE_SIZE);
+  }, [historyItems, historyPage]);
+
+  const hasNextHistoryPage = (historyPage + 1) * HISTORY_PAGE_SIZE < historyItems.length;
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(historyItems.length / HISTORY_PAGE_SIZE) - 1);
+    if (historyPage > maxPage) {
+      setHistoryPage(maxPage);
+    }
+  }, [historyItems.length, historyPage]);
+
   const toggleOne = (id: string) => {
     setSelectedIds((curr) =>
       curr.includes(id) ? curr.filter((item) => item !== id) : [...curr, id]
@@ -172,6 +194,12 @@ const OperationsJournal = () => {
 
   const toggleSummaryExpanded = (id: string) => {
     setExpandedSummaryIds((curr) =>
+      curr.includes(id) ? curr.filter((item) => item !== id) : [...curr, id]
+    );
+  };
+
+  const toggleLinkedExpanded = (id: string) => {
+    setExpandedLinkedIds((curr) =>
       curr.includes(id) ? curr.filter((item) => item !== id) : [...curr, id]
     );
   };
@@ -307,7 +335,7 @@ const OperationsJournal = () => {
       </section>
 
       {activeOperation && (
-        <section className="border border-border bg-card p-6 mt-6 rounded-md">
+        <section ref={detailsSectionRef} className="border border-border bg-card p-6 mt-6 rounded-md">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="font-mono text-xs tracking-widest text-muted-foreground">OPERATION DETAILS</h2>
             <div className="flex items-center gap-2">
@@ -362,16 +390,40 @@ const OperationsJournal = () => {
 
       <section className="border border-border bg-card p-6 mt-6 rounded-md">
         <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-          <h2 className="font-mono text-xs tracking-widest text-muted-foreground">
-            PREVIOUS SUMMARY OPERATIONS
-          </h2>
-          <button
-            onClick={fetchSummaryHistory}
-            disabled={summaryLoading}
-            className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
-          >
-            {summaryLoading ? "REFRESHING..." : "REFRESH"}
-          </button>
+          <div>
+            <h2 className="font-mono text-xs tracking-widest text-muted-foreground">
+              PREVIOUS SUMMARISATIONS AND QUESTIONS
+            </h2>
+            {historyItems.length > 0 && (
+              <p className="font-mono text-[11px] text-muted-foreground mt-1">
+                Showing {historyPage * HISTORY_PAGE_SIZE + 1}
+                -{Math.min((historyPage + 1) * HISTORY_PAGE_SIZE, historyItems.length)} of {historyItems.length}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setHistoryPage((curr) => Math.max(0, curr - 1))}
+              disabled={historyPage === 0 || summaryLoading}
+              className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
+            >
+              PREV
+            </button>
+            <button
+              onClick={() => setHistoryPage((curr) => curr + 1)}
+              disabled={!hasNextHistoryPage || summaryLoading}
+              className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
+            >
+              NEXT
+            </button>
+            <button
+              onClick={fetchSummaryHistory}
+              disabled={summaryLoading}
+              className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
+            >
+              {summaryLoading ? "REFRESHING..." : "REFRESH"}
+            </button>
+          </div>
         </div>
 
         {summaryError && (
@@ -380,52 +432,107 @@ const OperationsJournal = () => {
           </div>
         )}
 
-        {!summaryLoading && summaryHistory.length === 0 && !summaryError && (
+        {!summaryLoading && historyItems.length === 0 && !summaryError && (
           <div className="border border-border/70 bg-muted/30 p-4 rounded-md">
             <p className="font-mono text-xs text-muted-foreground">
-              No saved summaries yet. Generate one from the panel above and it will appear here.
+              No saved explain entries yet. Generate a summary or ask a question and it will appear here.
             </p>
           </div>
         )}
 
         <div className="space-y-3">
-          {summaryHistory.map((item) => {
+          {pagedHistoryItems.map((item) => {
             const expanded = expandedSummaryIds.includes(item.id);
+            const linkedExpanded = expandedLinkedIds.includes(item.id);
             const hasLinkedOperation = item.operation_ids.some((id) => operations.some((op) => op.id === id));
 
             return (
               <article key={item.id} className="border border-border/70 rounded-md p-4 bg-muted/20">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                  <p className="font-mono text-xs text-muted-foreground tracking-widest">
-                    {new Date(item.created_at).toLocaleString()}
-                  </p>
-                  <p className="font-mono text-[11px] text-muted-foreground">
-                    {item.operation_ids.length} linked operation{item.operation_ids.length === 1 ? "" : "s"}
-                  </p>
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_260px] gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                      <p className="font-mono text-xs text-muted-foreground tracking-widest">
+                        {new Date(item.created_at).toLocaleString()}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-mono text-[11px] text-muted-foreground">
+                          {item.operation_ids.length} linked operation{item.operation_ids.length === 1 ? "" : "s"}
+                        </p>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded border border-border/60 font-mono text-[10px] text-muted-foreground">
+                          {item.mode.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
 
-                <p className="font-body text-sm whitespace-pre-wrap leading-relaxed">
-                  {expanded ? item.answer : truncateText(item.answer)}
-                </p>
+                    {item.mode === "question" && item.question && (
+                      <p className="font-mono text-xs text-muted-foreground mb-2">Q: {item.question}</p>
+                    )}
 
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <button
-                    onClick={() => toggleSummaryExpanded(item.id)}
-                    className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted"
-                  >
-                    {expanded ? "SHOW LESS" : "SHOW FULL SUMMARY"}
-                  </button>
-                  {hasLinkedOperation && (
-                    <button
-                      onClick={() => {
-                        const availableIds = item.operation_ids.filter((id) => operations.some((op) => op.id === id));
-                        setSelectedIds((curr) => Array.from(new Set([...curr, ...availableIds])));
-                      }}
-                      className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted"
+                    <div
+                      className={`font-body text-sm leading-relaxed prose prose-invert max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 ${expanded ? "" : "max-h-36 overflow-hidden"}`}
                     >
-                      SELECT LINKED OPS
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.answer}</ReactMarkdown>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <button
+                        onClick={() => toggleSummaryExpanded(item.id)}
+                        className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted"
+                      >
+                        {expanded ? "SHOW LESS" : "SHOW FULL ENTRY"}
+                      </button>
+                      {hasLinkedOperation && (
+                        <button
+                          onClick={() => {
+                            const availableIds = item.operation_ids.filter((id) => operations.some((op) => op.id === id));
+                            setSelectedIds((curr) => Array.from(new Set([...curr, ...availableIds])));
+                          }}
+                          className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted"
+                        >
+                          SELECT LINKED OPS
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <aside className="border border-border/60 rounded-md p-3 bg-card/60 self-start">
+                    <button
+                      onClick={() => toggleLinkedExpanded(item.id)}
+                      className="w-full text-left font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted"
+                    >
+                      {linkedExpanded ? "HIDE LINKED OPERATIONS" : "SHOW LINKED OPERATIONS"}
                     </button>
-                  )}
+                    {linkedExpanded && (
+                      <div className="mt-2 space-y-2">
+                        {item.operation_ids.map((operationId) => {
+                          const linkedOp = operations.find((op) => op.id === operationId);
+                          if (!linkedOp) {
+                            return (
+                              <div
+                                key={operationId}
+                                className="border border-border/40 rounded-md px-2 py-2 font-mono text-[10px] text-muted-foreground"
+                              >
+                                {operationId.slice(0, 8)}... (not in current page)
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <button
+                              key={operationId}
+                              onClick={() => setActiveOperationId(operationId)}
+                              className="w-full text-left border border-border/50 rounded-md px-2 py-2 hover:bg-muted"
+                            >
+                              <p className="font-mono text-[10px] text-primary mb-1">{linkedOp.id.slice(0, 8)}...</p>
+                              <p className="font-mono text-[10px] text-muted-foreground">
+                                {prettyType(linkedOp.operation_type)} • {linkedOp.status.toUpperCase()}
+                              </p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </aside>
                 </div>
               </article>
             );
