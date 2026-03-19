@@ -67,6 +67,7 @@ class MarketDataResponse(BaseModel):
     interval: str
     num_candles: int
     candles: List[CandleData]
+    operation_id: Optional[str] = None
 
 
 class ExecutionLogEntry(BaseModel):
@@ -95,6 +96,7 @@ class SimulationResponse(BaseModel):
     strategy: str
     metrics: CostMetrics
     execution_logs: List[ExecutionLogEntry]
+    operation_id: Optional[str] = None
 
 
 class StrategyComparison(BaseModel):
@@ -108,6 +110,7 @@ class CompareResponse(BaseModel):
     order: dict
     comparisons: List[StrategyComparison]
     recommendation: str
+    operation_id: Optional[str] = None
 
 
 
@@ -148,6 +151,7 @@ class OptimizationResultResponse(BaseModel):
     generations_run: int
     population_size: int
     best_strategy_metrics: CostMetrics
+    operation_id: Optional[str] = None
 
 
 class EvaluateParamsRequest(BaseModel):
@@ -171,9 +175,34 @@ class EvaluateParamsResponse(BaseModel):
     parameters: dict
     cost: float
     metrics: CostMetrics
+    operation_id: Optional[str] = None
 
 
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str
     version: str
+
+
+class OperationsExplainRequest(BaseModel):
+    """Generate explanation or summary from one or more stored operations."""
+    operation_ids: List[str] = Field(..., min_length=1, description="One or more operation IDs")
+    question: Optional[str] = Field(default=None, description="Optional question; omit for a summary-style explanation")
+
+
+class OperationRecordResponse(BaseModel):
+    id: str
+    operation_type: str
+    status: str
+    created_at: datetime
+    request_payload: dict
+    response_payload: dict
+
+
+class OperationsExplainResponse(BaseModel):
+    explanation_id: str
+    mode: Literal["summary", "question"]
+    question: Optional[str] = None
+    answer: str
+    operation_ids: List[str]
+    model: str

@@ -38,7 +38,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 
 from db.database import get_db
-from db.repository import save_experiment
+from db.repository import save_experiment, save_operation_record
 from api.auth import verify_firebase_token
 
 router = APIRouter(prefix="/optimization", tags=["Optimization"])
@@ -311,7 +311,16 @@ def run_optimization(
     )
 
     response_dict = response.dict()
-    response_dict["experiment_id"] = str(experiment_id)
+
+    operation = save_operation_record(
+        db=db,
+        operation_type="optimize",
+        request_payload=req.dict(),
+        response_payload=response_dict,
+        status="completed",
+        experiment_id=experiment_id,
+    )
+    response_dict["operation_id"] = str(operation.id)
 
     return JSONResponse(content=response_dict)
 
@@ -319,6 +328,7 @@ def run_optimization(
 @router.post("/evaluate", response_model=EvaluateParamsResponse)
 def evaluate_params(
     req: EvaluateParamsRequest,
+    db: Session = Depends(get_db),
     user: dict = Depends(verify_firebase_token),  #auth 
 ):
     """
@@ -356,8 +366,20 @@ def evaluate_params(
 
     print(metrics)
 
-    return EvaluateParamsResponse(
+    response_payload = EvaluateParamsResponse(
         parameters=params,
         cost=round(cost, 4),
         metrics=metrics,
     )
+
+    response_dict = response_payload.dict()
+    operation = save_operation_record(
+        db=db,
+        operation_type="evaluate",
+        request_payload=req.dict(),
+        response_payload=response_dict,
+        status="completed",
+    )
+    response_dict["operation_id"] = str(operation.id)
+
+    return EvaluateParamsResponse(**response_dict)

@@ -1,7 +1,16 @@
 from datetime import datetime
+import json
+import uuid
 from sqlalchemy.orm import Session
 
-from .models import Experiment, StrategyParameter, ExecutionLogModel
+from .models import (
+    Experiment,
+    StrategyParameter,
+    ExecutionLogModel,
+    OperationRecord,
+    OperationExplanation,
+    OperationExplanationLink,
+)
 
 
 def _py_float(val):
@@ -84,3 +93,87 @@ def save_experiment(
     db.commit()
 
     return experiment_id
+
+
+def save_operation_record(
+    db: Session,
+    operation_type: str,
+    request_payload: dict,
+    response_payload: dict,
+    status: str = "completed",
+    experiment_id=None,
+):
+    record = OperationRecord(
+        operation_type=operation_type,
+        status=status,
+        request_payload=json.dumps(request_payload, default=str),
+        response_payload=json.dumps(response_payload, default=str),
+        created_at=datetime.utcnow(),
+        experiment_id=experiment_id,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def list_operation_records(db: Session, limit: int = 200):
+    return (
+        db.query(OperationRecord)
+        .order_by(OperationRecord.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def get_operation_records_by_ids(db: Session, operation_ids: list[str]):
+    parsed_ids = []
+    for op_id in operation_ids:
+        parsed_ids.append(uuid.UUID(op_id))
+
+    return (
+        db.query(OperationRecord)
+        .filter(OperationRecord.id.in_(parsed_ids))
+        .order_by(OperationRecord.created_at.asc())
+        .all()
+    )
+
+
+def save_operation_explanation(
+    db: Session,
+    operation_ids: list[str],
+    mode: str,
+    answer: str,
+    question: str | None = None,
+):
+    explanation = OperationExplanation(
+        mode=mode,
+        question=question,
+        answer=answer,
+        created_at=datetime.utcnow(),
+    )
+    db.add(explanation)
+    db.flush()
+
+    records = get_operation_records_by_ids(db, operation_ids)
+    for record in records:
+        db.add(
+            OperationExplanationLink(
+                explanation_id=explanation.id,
+                operation_id=record.id,
+            )
+        )
+
+    db.commit()
+    db.refresh(explanation)
+    return explanation
+
+
+def deserialize_payload(raw_payload: str) -> dict:
+    try:
+        payload = json.loads(raw_payload)
+        if isinstance(payload, dict):
+            return payload
+        return {"value": payload}
+    except (TypeError, json.JSONDecodeError):
+        return {"raw": raw_payload}

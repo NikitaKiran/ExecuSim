@@ -3,6 +3,7 @@ import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { apiFetch } from "@/lib/api";
+import OperationExplainPanel from "@/components/OperationExplainPanel";
 
 const Compare = () => {
   const [form, setForm] = useState({
@@ -252,6 +253,10 @@ const Compare = () => {
               </ResponsiveContainer>
             </section>
           </div>
+
+          {result.operation_id && (
+            <OperationExplainPanel operationIds={[result.operation_id]} />
+          )}
         </>
       ) : !loading && !error ? (
         <section className="border border-border bg-muted p-12 mt-6 text-center">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 import { apiFetch } from "@/lib/api";
+import OperationExplainPanel from "@/components/OperationExplainPanel";
 
 const Optimize = () => {
   const [form, setForm] = useState({
@@ -237,6 +238,10 @@ const Optimize = () => {
               </table>
             </div>
           </section>
+
+          {result.operation_id && (
+            <OperationExplainPanel operationIds={[result.operation_id]} />
+          )}
         </>
       ) : !loading && !error ? (
         <section className="border border-border bg-muted p-12 mt-6 text-center">

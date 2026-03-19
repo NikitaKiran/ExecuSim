@@ -32,6 +32,12 @@ const FEATURES = [
     path: "/evaluate",
     cta: "Evaluate Parameters →",
   },
+  {
+    title: "Operations Journal",
+    description: "Browse past runs, filter by operation type, and generate summary or Q&A explanations from one or more stored operations.",
+    path: "/operations-journal",
+    cta: "Open Operations Journal →",
+  },
 ];
 
 const Index = () => {

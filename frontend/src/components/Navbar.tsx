@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { label: "COMPARE", path: "/compare" },
   { label: "OPTIMIZE", path: "/optimize" },
   { label: "EVALUATE", path: "/evaluate" },
+  { label: "OPERATIONS", path: "/operations-journal" },
 ];
 
 const Navbar = () => {
