@@ -9,15 +9,24 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from fastapi import APIRouter, HTTPException
+from fastapi import Depends
+from sqlalchemy.orm import Session
 from api.models import MarketDataRequest, MarketDataResponse, CandleData
+from api.auth import verify_firebase_token
 
 from data.data_layer.pipeline import get_market_data
+from db.database import get_db
+from db.repository import save_operation_record
 
 router = APIRouter(prefix="/data", tags=["Market Data"])
 
 
 @router.post("/market", response_model=MarketDataResponse)
-def fetch_market_data(req: MarketDataRequest):
+def fetch_market_data(
+    req: MarketDataRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(verify_firebase_token),
+):
     """
     Fetch OHLCV market data for a ticker and date range.
     Data is cached in Parquet; missing ranges are downloaded automatically.
@@ -60,9 +69,26 @@ def fetch_market_data(req: MarketDataRequest):
             candle_vwap=float(row["candle_vwap"]) if "candle_vwap" in row else None,
         ))
 
+    response_payload = {
+        "ticker": req.ticker,
+        "interval": req.interval,
+        "num_candles": len(candles),
+        "candles": [c.dict() for c in candles],
+    }
+
+    operation = save_operation_record(
+        db=db,
+        firebase_uid=user["uid"],
+        operation_type="market_data",
+        request_payload=req.dict(),
+        response_payload=response_payload,
+        status="completed",
+    )
+
     return MarketDataResponse(
         ticker=req.ticker,
         interval=req.interval,
         num_candles=len(candles),
-        candles=candles
+        candles=candles,
+        operation_id=str(operation.id),
     )

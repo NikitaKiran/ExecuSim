@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import PageLayout from "@/components/PageLayout";
+import { apiFetch } from "@/lib/api";
+import OperationExplainPanel from "@/components/OperationExplainPanel";
 import {
   ComposedChart,
   Bar,
@@ -19,6 +21,7 @@ const MarketData = () => {
   const [interval, setInterval] = useState("1d");
 
   const [data, setData] = useState<any[] | null>(null);
+  const [operationId, setOperationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,14 +41,12 @@ const MarketData = () => {
 
     setError(null);
     setData(null);
+    setOperationId(null);
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/api/data/market", {
+      const response = await apiFetch("/api/data/market", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           ticker,
           start: startDate,
@@ -65,6 +66,7 @@ const MarketData = () => {
 
       const result = await response.json();
       setData(result.candles || []);
+      setOperationId(result.operation_id ?? null);
     } catch (err: any) {
       console.error("Market data fetch failed:", err);
       setError(err.message || "Failed to fetch market data. Please try again.");
@@ -394,6 +396,10 @@ const MarketData = () => {
               Brush selector shows raw UTC timestamps
             </p>
           </section>
+
+          {operationId && (
+            <OperationExplainPanel operationIds={[operationId]} />
+          )}
         </>
       )}
 

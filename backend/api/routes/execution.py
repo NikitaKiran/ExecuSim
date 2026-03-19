@@ -37,7 +37,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 
 from db.database import get_db
-from db.repository import save_experiment
+from db.repository import save_experiment, save_operation_record
 from api.auth import verify_firebase_token
 
 router = APIRouter(prefix="/execution", tags=["Execution"])
@@ -222,6 +222,7 @@ def run_simulation(
         strategy=req.strategy,
         metrics=result["metrics"],
         df_logs=df_logs,
+        firebase_uid=user["uid"],
     )
 
 
@@ -238,7 +239,17 @@ def run_simulation(
         execution_logs=result["log_entries"],
     )
     response_dict = response.dict()
-    response_dict["experiment_id"] = str(experiment_id)
+
+    operation = save_operation_record(
+        db=db,
+        firebase_uid=user["uid"],
+        operation_type="simulate",
+        request_payload=req.dict(),
+        response_payload=response_dict,
+        status="completed",
+        experiment_id=experiment_id,
+    )
+    response_dict["operation_id"] = str(operation.id)
 
     return JSONResponse(content=response_dict)
 
@@ -246,6 +257,7 @@ def run_simulation(
 @router.post("/compare", response_model=CompareResponse)
 def compare_strategies(
     req: CompareRequest,
+    db: Session = Depends(get_db),
     user: dict = Depends(verify_firebase_token),  #auth
 ):
     """
@@ -296,7 +308,7 @@ def compare_strategies(
     else:
         recommendation = "Both strategies produced equal slippage. Either is acceptable."
 
-    return CompareResponse(
+    response_payload = CompareResponse(
         order={
             "ticker": order.ticker,
             "side": order.side,
@@ -307,3 +319,16 @@ def compare_strategies(
         comparisons=comparisons,
         recommendation=recommendation,
     )
+
+    response_dict = response_payload.dict()
+    operation = save_operation_record(
+        db=db,
+        firebase_uid=user["uid"],
+        operation_type="compare",
+        request_payload=req.dict(),
+        response_payload=response_dict,
+        status="completed",
+    )
+    response_dict["operation_id"] = str(operation.id)
+
+    return CompareResponse(**response_dict)

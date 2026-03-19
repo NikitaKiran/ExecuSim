@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -8,7 +8,12 @@ from .database import Base
 
 class Experiment(Base):
     __tablename__ = "experiments"
+    __table_args__ = (
+        Index("ix_experiments_user_created_at", "firebase_uid", "created_at"),
+    )
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    firebase_uid = Column(String, index=True, nullable=False)
     instrument = Column(String, index=True)
     strategy = Column(String)
     order_side = Column(String)
@@ -28,6 +33,7 @@ class Experiment(Base):
 
     parameters = relationship("StrategyParameter", back_populates="experiment", cascade="all, delete-orphan")
     execution_logs = relationship("ExecutionLogModel", back_populates="experiment", cascade="all, delete-orphan")
+    operations = relationship("OperationRecord", back_populates="experiment")
 
 
 class StrategyParameter(Base):
@@ -52,3 +58,65 @@ class ExecutionLogModel(Base):
     execution_price = Column(Float)
 
     experiment = relationship("Experiment", back_populates="execution_logs")
+
+
+class OperationRecord(Base):
+    __tablename__ = "operation_records"
+    __table_args__ = (
+        Index("ix_operation_records_user_created_at", "firebase_uid", "created_at"),
+        Index("ix_operation_records_user_type", "firebase_uid", "operation_type"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    firebase_uid = Column(String, index=True, nullable=False)
+    operation_type = Column(String, index=True, nullable=False)
+    status = Column(String, nullable=False)
+    request_payload = Column(Text, nullable=False)
+    response_payload = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+    experiment_id = Column(UUID(as_uuid=True), ForeignKey("experiments.id"), nullable=True)
+
+    experiment = relationship("Experiment", back_populates="operations")
+    explanation_links = relationship(
+        "OperationExplanationLink",
+        back_populates="operation",
+        cascade="all, delete-orphan",
+    )
+
+
+class OperationExplanation(Base):
+    __tablename__ = "operation_explanations"
+    __table_args__ = (
+        Index("ix_operation_explanations_user_created_at", "firebase_uid", "created_at"),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    firebase_uid = Column(String, index=True, nullable=False)
+    mode = Column(String, nullable=False)  # summary | question
+    question = Column(Text, nullable=True)
+    answer = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+
+    operation_links = relationship(
+        "OperationExplanationLink",
+        back_populates="explanation",
+        cascade="all, delete-orphan",
+    )
+
+
+class OperationExplanationLink(Base):
+    __tablename__ = "operation_explanation_links"
+
+    explanation_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("operation_explanations.id"),
+        primary_key=True,
+    )
+    operation_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("operation_records.id"),
+        primary_key=True,
+    )
+
+    explanation = relationship("OperationExplanation", back_populates="operation_links")
+    operation = relationship("OperationRecord", back_populates="explanation_links")
