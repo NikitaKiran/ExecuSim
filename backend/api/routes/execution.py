@@ -222,6 +222,7 @@ def run_simulation(
         strategy=req.strategy,
         metrics=result["metrics"],
         df_logs=df_logs,
+        firebase_uid=user["uid"],
     )
 
 
@@ -241,6 +242,7 @@ def run_simulation(
 
     operation = save_operation_record(
         db=db,
+        firebase_uid=user["uid"],
         operation_type="simulate",
         request_payload=req.dict(),
         response_payload=response_dict,
@@ -321,6 +323,7 @@ def compare_strategies(
     response_dict = response_payload.dict()
     operation = save_operation_record(
         db=db,
+        firebase_uid=user["uid"],
         operation_type="compare",
         request_payload=req.dict(),
         response_payload=response_dict,

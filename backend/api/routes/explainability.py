@@ -8,8 +8,9 @@ from api.models import (
     OperationsExplainRequest,
     OperationsExplainResponse,
 )
+from api.auth import verify_firebase_token
 from db.database import get_db
-from db.repository import list_operation_explanations, save_operation_record
+from db.repository import list_operation_explanations
 from explainability import explain_operations
 
 router = APIRouter(prefix="/explainability", tags=["Explainability"])
@@ -19,29 +20,20 @@ router = APIRouter(prefix="/explainability", tags=["Explainability"])
 def explain_from_operations(
     req: OperationsExplainRequest,
     db: Session = Depends(get_db),
+    user: dict = Depends(verify_firebase_token),
 ):
     """Generate a summary or answer using one or more stored operations."""
     try:
         payload = explain_operations(
             db=db,
             operation_ids=req.operation_ids,
+            firebase_uid=user["uid"],
             question=req.question,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"Explainability service unavailable: {exc}") from exc
-
-    save_operation_record(
-        db=db,
-        operation_type="explain_summary" if payload.get("mode") == "summary" else "explain_question",
-        request_payload={
-            "operation_ids": req.operation_ids,
-            "question": req.question,
-        },
-        response_payload=payload,
-        status="completed",
-    )
 
     return OperationsExplainResponse(**payload)
 
@@ -51,11 +43,17 @@ def get_explanation_history(
     mode: str | None = None,
     limit: int = 100,
     db: Session = Depends(get_db),
+    user: dict = Depends(verify_firebase_token),
 ):
     if mode and mode not in {"summary", "question"}:
         raise HTTPException(status_code=400, detail="mode must be either 'summary' or 'question'.")
 
-    records = list_operation_explanations(db=db, mode=mode, limit=limit)
+    records = list_operation_explanations(
+        db=db,
+        firebase_uid=user["uid"],
+        mode=mode,
+        limit=limit,
+    )
     payload = []
     for item in records:
         payload.append(

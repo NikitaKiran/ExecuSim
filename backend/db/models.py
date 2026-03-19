@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Text, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -8,7 +8,12 @@ from .database import Base
 
 class Experiment(Base):
     __tablename__ = "experiments"
+    __table_args__ = (
+        Index("ix_experiments_user_created_at", "firebase_uid", "created_at"),
+    )
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    firebase_uid = Column(String, index=True, nullable=False)
     instrument = Column(String, index=True)
     strategy = Column(String)
     order_side = Column(String)
@@ -57,8 +62,13 @@ class ExecutionLogModel(Base):
 
 class OperationRecord(Base):
     __tablename__ = "operation_records"
+    __table_args__ = (
+        Index("ix_operation_records_user_created_at", "firebase_uid", "created_at"),
+        Index("ix_operation_records_user_type", "firebase_uid", "operation_type"),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    firebase_uid = Column(String, index=True, nullable=False)
     operation_type = Column(String, index=True, nullable=False)
     status = Column(String, nullable=False)
     request_payload = Column(Text, nullable=False)
@@ -76,8 +86,12 @@ class OperationRecord(Base):
 
 class OperationExplanation(Base):
     __tablename__ = "operation_explanations"
+    __table_args__ = (
+        Index("ix_operation_explanations_user_created_at", "firebase_uid", "created_at"),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    firebase_uid = Column(String, index=True, nullable=False)
     mode = Column(String, nullable=False)  # summary | question
     question = Column(Text, nullable=True)
     answer = Column(Text, nullable=False)

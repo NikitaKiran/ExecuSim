@@ -57,13 +57,14 @@ def _build_operations_context(records) -> str:
 def explain_operations(
     db: Session,
     operation_ids: list[str],
+    firebase_uid: str,
     question: Optional[str] = None,
     model_name: str = "gemini-2.5-flash",
 ) -> dict:
     if not operation_ids:
         raise ValueError("At least one operation_id is required.")
 
-    records = get_operation_records_by_ids(db, operation_ids)
+    records = get_operation_records_by_ids(db, operation_ids, firebase_uid)
     if not records:
         raise ValueError("No operations found for the provided IDs.")
 
@@ -107,6 +108,7 @@ def explain_operations(
     explanation = save_operation_explanation(
         db=db,
         operation_ids=operation_ids,
+        firebase_uid=firebase_uid,
         mode=mode,
         question=question.strip() if question else None,
         answer=answer,

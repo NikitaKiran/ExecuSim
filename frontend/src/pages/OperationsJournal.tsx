@@ -52,6 +52,8 @@ const jsonToPrettyText = (value: unknown): string => {
   }
 };
 
+const RESPONSE_PAYLOAD_PREVIEW_LINES = 18;
+
 const OperationsJournal = () => {
   const [operations, setOperations] = useState<OperationRecord[]>([]);
   const [historyItems, setHistoryItems] = useState<SummaryHistoryItem[]>([]);
@@ -67,6 +69,7 @@ const OperationsJournal = () => {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [historyPage, setHistoryPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showFullResponsePayload, setShowFullResponsePayload] = useState(false);
   const detailsSectionRef = useRef<HTMLElement | null>(null);
 
   const fetchOperations = async () => {
@@ -161,6 +164,10 @@ const OperationsJournal = () => {
     if (!activeOperation || !detailsSectionRef.current) return;
     detailsSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [activeOperation]);
+
+  useEffect(() => {
+    setShowFullResponsePayload(false);
+  }, [activeOperationId]);
 
   const pagedHistoryItems = useMemo(() => {
     const start = historyPage * HISTORY_PAGE_SIZE;
@@ -377,9 +384,31 @@ const OperationsJournal = () => {
           </pre>
 
           <p className="font-mono text-[11px] text-muted-foreground mb-2">RESPONSE PAYLOAD</p>
-          <pre className="bg-muted border border-border rounded-md p-3 text-xs font-mono overflow-x-auto">
-            {jsonToPrettyText(activeOperation.response_payload)}
-          </pre>
+          {(() => {
+            const responsePayloadText = jsonToPrettyText(activeOperation.response_payload);
+            const responsePayloadLines = responsePayloadText.split("\n");
+            const isLongPayload = responsePayloadLines.length > RESPONSE_PAYLOAD_PREVIEW_LINES;
+            const visiblePayload =
+              isLongPayload && !showFullResponsePayload
+                ? `${responsePayloadLines.slice(0, RESPONSE_PAYLOAD_PREVIEW_LINES).join("\n")}\n...`
+                : responsePayloadText;
+
+            return (
+              <>
+                <pre className="bg-muted border border-border rounded-md p-3 text-xs font-mono overflow-x-auto">
+                  {visiblePayload}
+                </pre>
+                {isLongPayload && (
+                  <button
+                    onClick={() => setShowFullResponsePayload((curr) => !curr)}
+                    className="mt-2 font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted"
+                  >
+                    {showFullResponsePayload ? "VIEW LESS" : "VIEW MORE"}
+                  </button>
+                )}
+              </>
+            );
+          })()}
         </section>
       )}
 

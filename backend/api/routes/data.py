@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from api.models import MarketDataRequest, MarketDataResponse, CandleData
+from api.auth import verify_firebase_token
 
 from data.data_layer.pipeline import get_market_data
 from db.database import get_db
@@ -21,7 +22,11 @@ router = APIRouter(prefix="/data", tags=["Market Data"])
 
 
 @router.post("/market", response_model=MarketDataResponse)
-def fetch_market_data(req: MarketDataRequest, db: Session = Depends(get_db)):
+def fetch_market_data(
+    req: MarketDataRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(verify_firebase_token),
+):
     """
     Fetch OHLCV market data for a ticker and date range.
     Data is cached in Parquet; missing ranges are downloaded automatically.
@@ -73,6 +78,7 @@ def fetch_market_data(req: MarketDataRequest, db: Session = Depends(get_db)):
 
     operation = save_operation_record(
         db=db,
+        firebase_uid=user["uid"],
         operation_type="market_data",
         request_payload=req.dict(),
         response_payload=response_payload,

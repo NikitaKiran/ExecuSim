@@ -37,10 +37,12 @@ def save_experiment(
     df_logs,
     params=None,
     seed=None,
-    workers=None
+    workers=None,
+    firebase_uid: str = "",
 ):
 
     exp = Experiment(
+        firebase_uid=firebase_uid,
         instrument=order.ticker,
         strategy=strategy,
         order_side=order.side,
@@ -97,6 +99,7 @@ def save_experiment(
 
 def save_operation_record(
     db: Session,
+    firebase_uid: str,
     operation_type: str,
     request_payload: dict,
     response_payload: dict,
@@ -104,6 +107,7 @@ def save_operation_record(
     experiment_id=None,
 ):
     record = OperationRecord(
+        firebase_uid=firebase_uid,
         operation_type=operation_type,
         status=status,
         request_payload=json.dumps(request_payload, default=str),
@@ -117,31 +121,37 @@ def save_operation_record(
     return record
 
 
-def list_operation_explanations(db: Session, mode: str | None = None, limit: int = 100):
-    query = db.query(OperationExplanation)
+def list_operation_explanations(
+    db: Session,
+    firebase_uid: str,
+    mode: str | None = None,
+    limit: int = 100,
+):
+    query = db.query(OperationExplanation).filter(OperationExplanation.firebase_uid == firebase_uid)
     if mode:
         query = query.filter(OperationExplanation.mode == mode)
 
     return query.order_by(OperationExplanation.created_at.desc()).limit(limit).all()
 
 
-def list_operation_records(db: Session, limit: int = 200):
+def list_operation_records(db: Session, firebase_uid: str, limit: int = 200):
     return (
         db.query(OperationRecord)
+        .filter(OperationRecord.firebase_uid == firebase_uid)
         .order_by(OperationRecord.created_at.desc())
         .limit(limit)
         .all()
     )
 
 
-def get_operation_records_by_ids(db: Session, operation_ids: list[str]):
+def get_operation_records_by_ids(db: Session, operation_ids: list[str], firebase_uid: str):
     parsed_ids = []
     for op_id in operation_ids:
         parsed_ids.append(uuid.UUID(op_id))
 
     return (
         db.query(OperationRecord)
-        .filter(OperationRecord.id.in_(parsed_ids))
+        .filter(OperationRecord.id.in_(parsed_ids), OperationRecord.firebase_uid == firebase_uid)
         .order_by(OperationRecord.created_at.asc())
         .all()
     )
@@ -150,11 +160,13 @@ def get_operation_records_by_ids(db: Session, operation_ids: list[str]):
 def save_operation_explanation(
     db: Session,
     operation_ids: list[str],
+    firebase_uid: str,
     mode: str,
     answer: str,
     question: str | None = None,
 ):
     explanation = OperationExplanation(
+        firebase_uid=firebase_uid,
         mode=mode,
         question=question,
         answer=answer,
@@ -163,7 +175,7 @@ def save_operation_explanation(
     db.add(explanation)
     db.flush()
 
-    records = get_operation_records_by_ids(db, operation_ids)
+    records = get_operation_records_by_ids(db, operation_ids, firebase_uid)
     for record in records:
         db.add(
             OperationExplanationLink(

@@ -300,6 +300,7 @@ def run_optimization(
         params=best_params,
         seed=req.seed,
         workers=req.population_size,
+        firebase_uid=user["uid"],
     )
 
     response = OptimizationResultResponse(
@@ -314,6 +315,7 @@ def run_optimization(
 
     operation = save_operation_record(
         db=db,
+        firebase_uid=user["uid"],
         operation_type="optimize",
         request_payload=req.dict(),
         response_payload=response_dict,
@@ -375,6 +377,7 @@ def evaluate_params(
     response_dict = response_payload.dict()
     operation = save_operation_record(
         db=db,
+        firebase_uid=user["uid"],
         operation_type="evaluate",
         request_payload=req.dict(),
         response_payload=response_dict,
