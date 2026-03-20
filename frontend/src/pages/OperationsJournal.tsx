@@ -24,6 +24,7 @@ type SummaryHistoryItem = {
 };
 
 const HISTORY_PAGE_SIZE = 3;
+const OPERATIONS_PAGE_SIZE = 10;
 
 const prettyType = (raw: string) => raw.replace(/_/g, " ").toUpperCase();
 
@@ -82,6 +83,7 @@ const OperationsJournal = () => {
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [operationsPage, setOperationsPage] = useState(0);
   const [historyPage, setHistoryPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showFullResponsePayload, setShowFullResponsePayload] = useState(false);
@@ -150,25 +152,35 @@ const OperationsJournal = () => {
 
   const filteredOperations = useMemo(() => {
     const searchLower = search.trim().toLowerCase();
-    return operations.filter((op) => {
-      if (typeFilter !== "ALL" && op.operation_type !== typeFilter) return false;
-      if (statusFilter !== "ALL" && op.status.toUpperCase() !== statusFilter) return false;
+    return operations
+      .filter((op) => {
+        if (typeFilter !== "ALL" && op.operation_type !== typeFilter) return false;
+        if (statusFilter !== "ALL" && op.status.toUpperCase() !== statusFilter) return false;
 
-      if (!searchLower) return true;
+        if (!searchLower) return true;
 
-      const idMatch = op.id.toLowerCase().includes(searchLower);
-      const typeMatch = op.operation_type.toLowerCase().includes(searchLower);
-      const statusMatch = op.status.toLowerCase().includes(searchLower);
-      const requestMatch = jsonToPrettyText(op.request_payload).toLowerCase().includes(searchLower);
-      const responseMatch = jsonToPrettyText(op.response_payload).toLowerCase().includes(searchLower);
+        const idMatch = op.id.toLowerCase().includes(searchLower);
+        const typeMatch = op.operation_type.toLowerCase().includes(searchLower);
+        const statusMatch = op.status.toLowerCase().includes(searchLower);
+        const requestMatch = jsonToPrettyText(op.request_payload).toLowerCase().includes(searchLower);
+        const responseMatch = jsonToPrettyText(op.response_payload).toLowerCase().includes(searchLower);
 
-      return idMatch || typeMatch || statusMatch || requestMatch || responseMatch;
-    });
+        return idMatch || typeMatch || statusMatch || requestMatch || responseMatch;
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [operations, search, typeFilter, statusFilter]);
 
+  const pagedOperations = useMemo(() => {
+    const start = operationsPage * OPERATIONS_PAGE_SIZE;
+    return filteredOperations.slice(start, start + OPERATIONS_PAGE_SIZE);
+  }, [filteredOperations, operationsPage]);
+
+  const hasNextOperationsPage =
+    (operationsPage + 1) * OPERATIONS_PAGE_SIZE < filteredOperations.length;
+
   const allSelected = useMemo(() => {
-    return filteredOperations.length > 0 && filteredOperations.every((op) => selectedIds.includes(op.id));
-  }, [filteredOperations, selectedIds]);
+    return pagedOperations.length > 0 && pagedOperations.every((op) => selectedIds.includes(op.id));
+  }, [pagedOperations, selectedIds]);
 
   const activeOperation = useMemo(() => {
     if (!activeOperationId) return null;
@@ -198,6 +210,13 @@ const OperationsJournal = () => {
     }
   }, [historyItems.length, historyPage]);
 
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(filteredOperations.length / OPERATIONS_PAGE_SIZE) - 1);
+    if (operationsPage > maxPage) {
+      setOperationsPage(maxPage);
+    }
+  }, [filteredOperations.length, operationsPage]);
+
   const toggleOne = (id: string) => {
     setSelectedIds((curr) =>
       curr.includes(id) ? curr.filter((item) => item !== id) : [...curr, id]
@@ -206,11 +225,11 @@ const OperationsJournal = () => {
 
   const toggleAll = () => {
     if (allSelected) {
-      setSelectedIds((curr) => curr.filter((id) => !filteredOperations.some((op) => op.id === id)));
+      setSelectedIds((curr) => curr.filter((id) => !pagedOperations.some((op) => op.id === id)));
       return;
     }
     const merged = new Set(selectedIds);
-    filteredOperations.forEach((op) => merged.add(op.id));
+    pagedOperations.forEach((op) => merged.add(op.id));
     setSelectedIds(Array.from(merged));
   };
 
@@ -273,8 +292,26 @@ const OperationsJournal = () => {
         </div>
 
         <p className="font-mono text-[11px] text-muted-foreground mb-3">
-          Showing {filteredOperations.length} of {operations.length} operations.
+          Showing {filteredOperations.length === 0 ? 0 : operationsPage * OPERATIONS_PAGE_SIZE + 1}
+          -{Math.min((operationsPage + 1) * OPERATIONS_PAGE_SIZE, filteredOperations.length)} of {filteredOperations.length} operations (from {operations.length} total).
         </p>
+
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setOperationsPage((curr) => Math.max(0, curr - 1))}
+            disabled={operationsPage === 0 || loading}
+            className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
+          >
+            PREV
+          </button>
+          <button
+            onClick={() => setOperationsPage((curr) => curr + 1)}
+            disabled={!hasNextOperationsPage || loading}
+            className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
+          >
+            NEXT
+          </button>
+        </div>
 
         {error && (
           <div className="border border-red-500/40 bg-red-950/20 p-4 rounded-md mb-4">
@@ -318,7 +355,7 @@ const OperationsJournal = () => {
                 </tr>
               )}
 
-              {filteredOperations.map((op) => (
+              {pagedOperations.map((op) => (
                 <tr key={op.id} className="border-b border-border/40 hover:bg-muted/40">
                   <td className="py-2 pr-4">
                     <input

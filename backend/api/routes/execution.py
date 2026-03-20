@@ -24,7 +24,7 @@ from api.models import (
 
 from data.data_layer.pipeline import get_market_data
 from execution.engine import ExecutionEngine, ParentOrder
-from execution.strategies import TWAPStrategy, VWAPStrategy
+from execution.strategy_factory import StrategyFactory
 from execution.cost_model import (
     compute_arrival_price,
     compute_average_execution_price,
@@ -45,11 +45,6 @@ router = APIRouter(prefix="/execution", tags=["Execution"])
 # ==========================================
 # HELPERS
 # ==========================================
-
-STRATEGY_MAP = {
-    "TWAP": TWAPStrategy,
-    "VWAP": VWAPStrategy,
-}
 
 
 def _build_parent_order(req, market_data) -> ParentOrder:
@@ -83,15 +78,15 @@ def _run_single_strategy(
     Run a single strategy and compute all cost metrics.
     Returns a dict with 'metrics', 'logs_df', 'log_entries'.
     """
-    strategy_cls = STRATEGY_MAP.get(strategy_name)
-    if strategy_cls is None:
+    try:
+        strategy = StrategyFactory.create(strategy_name)
+    except ValueError as exc:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown strategy: {strategy_name}. Available: {list(STRATEGY_MAP.keys())}",
+            detail=str(exc),
         )
 
     engine = ExecutionEngine(market_data)
-    strategy = strategy_cls()
     schedule = strategy.generate_schedule(order, market_data)
 
     if not schedule:
@@ -170,12 +165,7 @@ def _run_single_strategy(
 @router.get("/strategies")
 def list_strategies():
     """List available execution strategies."""
-    return {
-        "strategies": [
-            {"name": "TWAP", "description": "Time Weighted Average Price — splits order evenly across time."},
-            {"name": "VWAP", "description": "Volume Weighted Average Price — allocates proportionally to volume."},
-        ]
-    }
+    return {"strategies": StrategyFactory.list_strategies()}
 
 
 @router.post("/simulate")

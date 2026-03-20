@@ -24,7 +24,7 @@ from api.models import (
 
 from data.data_layer.pipeline import get_market_data
 from execution.engine import ExecutionEngine, ParentOrder
-from execution.strategies import VWAPStrategy
+from execution.strategy_factory import StrategyFactory
 from execution.cost_model import (
     compute_arrival_price,
     compute_average_execution_price,
@@ -93,16 +93,7 @@ def _make_vwap_strategy(params: dict):
         "participation_cap": float(params.get("participation_cap", 1.0)),
         "aggressiveness": float(params.get("aggressiveness", 1.0)),
     }
-    try:
-        return VWAPStrategy(**kwargs)
-    except TypeError:
-        # VWAPStrategy doesn't accept these kwargs — use default constructor
-        # and store params as attributes for schedule generation
-        strategy = VWAPStrategy()
-        strategy.slice_frequency = kwargs["slice_frequency"]
-        strategy.participation_cap = kwargs["participation_cap"]
-        strategy.aggressiveness = kwargs["aggressiveness"]
-        return strategy
+    return StrategyFactory.create("VWAP", kwargs)
 
 
 def _compute_cost(params: dict, market_data: pd.DataFrame, order: ParentOrder) -> float:
