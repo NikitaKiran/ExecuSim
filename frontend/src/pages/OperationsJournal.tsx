@@ -262,12 +262,24 @@ const OperationsJournal = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by id, type, status, or payload values"
-            className="h-10 bg-muted border border-border text-foreground font-mono text-xs px-3 rounded-md focus:outline-none focus:border-primary"
-          />
+          <div className="relative">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by id, type, status, or payload values"
+              className="h-10 w-full bg-muted border border-border text-foreground font-mono text-xs pl-3 pr-9 rounded-md focus:outline-none focus:border-primary"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                x
+              </button>
+            )}
+          </div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}

@@ -90,12 +90,24 @@ const OperationExplainPanel = ({
         Generate a plain-language summary or ask a focused question using all stored inputs/outputs from the selected operation(s).
       </p>
 
-      <textarea
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        placeholder="Example: Why is implementation shortfall high in this run?"
-        className="w-full min-h-24 bg-muted border border-border text-foreground font-mono text-sm px-3 py-2 rounded-md focus:outline-none focus:border-primary"
-      />
+      <div className="relative">
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Example: Why is implementation shortfall high in this run?"
+          className="w-full min-h-24 bg-muted border border-border text-foreground font-mono text-sm pl-3 pr-10 py-2 rounded-md focus:outline-none focus:border-primary"
+        />
+        {question && (
+          <button
+            type="button"
+            onClick={() => setQuestion("")}
+            aria-label="Clear question"
+            className="absolute right-2 top-2 h-6 w-6 rounded border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            x
+          </button>
+        )}
+      </div>
 
       <div className="flex flex-wrap gap-3 mt-3">
         <button
