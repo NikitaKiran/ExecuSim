@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import uuid
 from sqlalchemy.orm import Session
@@ -58,7 +58,7 @@ def save_experiment(
         seed=_py_int(seed),
         worker_count=_py_int(workers),
         status="completed",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
     db.add(exp)
@@ -112,7 +112,7 @@ def save_operation_record(
         status=status,
         request_payload=json.dumps(request_payload, default=str),
         response_payload=json.dumps(response_payload, default=str),
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         experiment_id=experiment_id,
     )
     db.add(record)
@@ -170,7 +170,7 @@ def save_operation_explanation(
         mode=mode,
         question=question,
         answer=answer,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.add(explanation)
     db.flush()

@@ -52,6 +52,21 @@ const jsonToPrettyText = (value: unknown): string => {
   }
 };
 
+const formatCreatedAt = (value: string): string => {
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZoneName: "short",
+  }).format(dt);
+};
+
 const RESPONSE_PAYLOAD_PREVIEW_LINES = 18;
 
 const OperationsJournal = () => {
@@ -324,7 +339,7 @@ const OperationsJournal = () => {
                     </span>
                   </td>
                   <td className="py-2 pr-4 font-mono text-xs">
-                    {new Date(op.created_at).toLocaleString()}
+                    {formatCreatedAt(op.created_at)}
                   </td>
                   <td className="py-2 pr-4 font-mono text-xs">
                     <button
@@ -374,7 +389,7 @@ const OperationsJournal = () => {
             </div>
             <div className="border border-border/70 rounded-md p-3 bg-muted/40">
               <p className="font-mono text-[11px] text-muted-foreground mb-1">CREATED</p>
-              <p className="font-mono text-xs">{new Date(activeOperation.created_at).toLocaleString()}</p>
+              <p className="font-mono text-xs">{formatCreatedAt(activeOperation.created_at)}</p>
             </div>
           </div>
 
@@ -481,7 +496,7 @@ const OperationsJournal = () => {
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                       <p className="font-mono text-xs text-muted-foreground tracking-widest">
-                        {new Date(item.created_at).toLocaleString()}
+                        {formatCreatedAt(item.created_at)}
                       </p>
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-mono text-[11px] text-muted-foreground">

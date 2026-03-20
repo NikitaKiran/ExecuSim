@@ -29,7 +29,7 @@ class Experiment(Base):
     seed = Column(Integer)
     worker_count = Column(Integer)
     status = Column(String)
-    created_at = Column(DateTime)
+    created_at = Column(DateTime(timezone=True))
 
     parameters = relationship("StrategyParameter", back_populates="experiment", cascade="all, delete-orphan")
     execution_logs = relationship("ExecutionLogModel", back_populates="experiment", cascade="all, delete-orphan")
@@ -73,7 +73,7 @@ class OperationRecord(Base):
     status = Column(String, nullable=False)
     request_payload = Column(Text, nullable=False)
     response_payload = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
     experiment_id = Column(UUID(as_uuid=True), ForeignKey("experiments.id"), nullable=True)
 
     experiment = relationship("Experiment", back_populates="operations")
@@ -95,7 +95,7 @@ class OperationExplanation(Base):
     mode = Column(String, nullable=False)  # summary | question
     question = Column(Text, nullable=True)
     answer = Column(Text, nullable=False)
-    created_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
 
     operation_links = relationship(
         "OperationExplanationLink",
