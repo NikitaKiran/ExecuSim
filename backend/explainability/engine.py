@@ -93,8 +93,8 @@ def explain_operations(
     else:
         prompt = (
             "You are an execution analytics assistant. "
-            "Answer the user's question in detail using ONLY the operations context below. "
-            "If information is missing, state that clearly and do not invent details.\n\n"
+            "Answer the user's question in detail using the operations context below. "
+            "Do not invent any details.\n\n"
             f"User question: {question.strip()}\n\n"
             "Operations context:\n"
             f"{context_text}"
