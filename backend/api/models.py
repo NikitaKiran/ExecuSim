@@ -187,7 +187,11 @@ class HealthResponse(BaseModel):
 class OperationsExplainRequest(BaseModel):
     """Generate explanation or summary from one or more stored operations."""
     operation_ids: List[str] = Field(..., min_length=1, description="One or more operation IDs")
-    question: Optional[str] = Field(default=None, description="Optional question; omit for a summary-style explanation")
+    question: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="Optional question; omit for a summary-style explanation (max 1000 chars)",
+    )
 
 
 class OperationRecordResponse(BaseModel):

@@ -17,6 +17,8 @@ type OperationExplainPanelProps = {
   title?: string;
 };
 
+const QUESTION_MAX_LENGTH = 500;
+
 const OperationExplainPanel = ({
   operationIds,
   title = "EXPLAIN THIS RESULT",
@@ -46,6 +48,11 @@ const OperationExplainPanel = ({
 
     if (mode === "question" && !trimmedQuestion) {
       setError("Enter a question or use Generate Summary.");
+      return;
+    }
+
+    if (mode === "question" && trimmedQuestion.length > QUESTION_MAX_LENGTH) {
+      setError(`Question must be ${QUESTION_MAX_LENGTH} characters or fewer.`);
       return;
     }
 
@@ -94,6 +101,7 @@ const OperationExplainPanel = ({
         <textarea
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
+          maxLength={QUESTION_MAX_LENGTH}
           placeholder="Example: Why is implementation shortfall high in this run?"
           className="w-full min-h-24 bg-muted border border-border text-foreground font-mono text-sm pl-3 pr-10 py-2 rounded-md focus:outline-none focus:border-primary"
         />
@@ -108,6 +116,9 @@ const OperationExplainPanel = ({
           </button>
         )}
       </div>
+      <p className="mt-1 text-[11px] text-muted-foreground font-mono">
+        {question.length}/{QUESTION_MAX_LENGTH}
+      </p>
 
       <div className="flex flex-wrap gap-3 mt-3">
         <button
