@@ -22,22 +22,11 @@ const Optimize = () => {
   const update = (key: string, val: string) => setForm((f) => ({ ...f, [key]: val }));
   const updateGa = (key: string, val: string) => setGaSettings((f) => ({ ...f, [key]: val }));
 
-  // const validateMarketHours = (time: string): boolean => {
-  //   const [h, m] = time.split(":").map(Number);
-  //   const mins = h * 60 + m;
-  //   return mins >= 9 * 60 + 30 && mins <= 16 * 60;
-  // };
-
   const run = async () => {
     if (!form.ticker || !form.side || !form.quantity || !form.startDate || !form.endDate || !form.startTime || !form.endTime || !form.interval) {
       setError("Please fill in all fields.");
       return;
     }
-
-    // if (!validateMarketHours(form.startTime) || !validateMarketHours(form.endTime)) {
-    //   setError("Start and end times must be within US market hours (09:30 – 16:00 ET).");
-    //   return;
-    // }
 
     const startDT = new Date(`${form.startDate}T${form.startTime}`);
     const endDT = new Date(`${form.endDate}T${form.endTime}`);
@@ -68,7 +57,7 @@ const Optimize = () => {
         if (gaSettings.seed) body.seed = parseInt(gaSettings.seed);
       }
 
-      const response = await apiFetch("/api/optimization/optimize", {  // <-- changed
+      const response = await apiFetch("/api/optimization/optimize", {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -104,7 +93,7 @@ const Optimize = () => {
             <input
               type="text"
               value={form.ticker}
-              onChange={(e) => update("ticker", e.target.value.toUpperCase())} // auto-uppercase for consistency
+              onChange={(e) => update("ticker", e.target.value.toUpperCase())}
               placeholder="e.g. AAPL, RELIANCE.NS, BTC-USD"
               className="w-full h-[38px] bg-muted border border-border text-foreground font-mono text-sm px-3 py-2 focus:outline-none focus:border-primary rounded-md"
             />

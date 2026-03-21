@@ -5,7 +5,6 @@ Market data API routes.
 import sys
 import os
 
-# Ensure project root is on sys.path so data/execution imports work
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from fastapi import APIRouter, HTTPException
@@ -44,13 +43,10 @@ def fetch_market_data(
     if df.empty:
         raise HTTPException(status_code=404, detail="No market data found for the given parameters.")
 
-    # Reset index so datetime becomes a column
     df_out = df.reset_index()
     df_out.rename(columns={"index": "datetime"}, inplace=True)
 
-    # Ensure datetime column exists
     if "datetime" not in df_out.columns:
-        # If the index reset didn't produce 'datetime', find it
         for col in df_out.columns:
             if "date" in col.lower() or "time" in col.lower():
                 df_out.rename(columns={col: "datetime"}, inplace=True)

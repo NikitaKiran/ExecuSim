@@ -17,7 +17,7 @@ const Evaluate = () => {
     sliceFrequency: "5",
     participationCapital: "0.10",
     aggressiveness: "1.0",
-    seed: "42",                    // added for completeness (not sent to /evaluate)
+    seed: "42",
   });
 
   const [result, setResult] = useState<any>(null);
@@ -34,7 +34,6 @@ const Evaluate = () => {
     setResult(null);
     setLoading(true);
 
-    // Required field validation (same style as Simulation.tsx)
     if (
       !form.startDate ||
       !form.endDate ||
@@ -51,7 +50,6 @@ const Evaluate = () => {
       const partCap = parseFloat(form.participationCapital);
       const agg = parseFloat(form.aggressiveness);
 
-      // Quick client-side sanity checks
       if (isNaN(sliceFreq) || sliceFreq < 1) throw new Error("Slice frequency must be ≥ 1");
       if (isNaN(partCap) || partCap < 0.01 || partCap > 1) throw new Error("Participation capital must be 0.01–1.0");
       if (isNaN(agg) || agg < 0.1) throw new Error("Aggressiveness must be ≥ 0.1");
@@ -68,12 +66,11 @@ const Evaluate = () => {
         slice_frequency: sliceFreq,
         participation_cap: partCap,
         aggressiveness: agg,
-        // seed is NOT sent — /evaluate does not use it (only /optimize does)
       };
 
       console.log("Sending payload to /evaluate:", payload);
 
-      const response = await apiFetch("/api/optimization/evaluate", {  // <-- changed
+      const response = await apiFetch("/api/optimization/evaluate", {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -95,7 +92,6 @@ const Evaluate = () => {
 
       const data = await response.json();
 
-      // Map backend response to the table format you originally wanted
       setResult({
         cost: data.cost,
         implementation_shortfall: data.metrics.implementation_shortfall,
@@ -122,7 +118,6 @@ const Evaluate = () => {
           Evaluate specific VWAP parameter sets against historical market data.
         </p>
 
-        {/* Order Details — same layout style as Simulation.tsx */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Field label="TICKER" value={form.ticker} placeholder="e.g. AAPL, RELIANCE.NS, BTC-USD" onChange={(v) => update("ticker", v)} />
           <SelectField label="SIDE" value={form.side} onChange={(v) => update("side", v)} options={["Buy", "Sell"]} />
@@ -141,14 +136,12 @@ const Evaluate = () => {
           <TimeWheelPicker label="END TIME" value={form.endTime} onChange={(v) => update("endTime", v)} />
         </div>
 
-       {/* Strategy Tuning Parameters */}
 <div className="mt-8 pt-6 border-t border-border">
   <div className="flex items-center justify-between mb-4">
     <h3 className="font-mono text-xs tracking-widest text-muted-foreground">
       STRATEGY TUNING PARAMETERS
     </h3>
     
-    {/* Tip / Info toggle button */}
     <button
       type="button"
       onClick={() => setShowParamsInfo(!showParamsInfo)}
@@ -159,7 +152,6 @@ const Evaluate = () => {
     </button>
   </div>
 
-  {/* The explanations — now conditional */}
   {showParamsInfo && (
     <div className="mb-6 text-xs text-muted-foreground font-mono space-y-3 bg-muted/50 p-4 rounded-md border border-border/50">
       <p>
@@ -197,7 +189,6 @@ const Evaluate = () => {
       type="number"
       step="0.1"
     />
-    {/* <Field ... seed ... />  ← remains commented as in your version */}
   </div>
 </div>
 

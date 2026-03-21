@@ -99,9 +99,7 @@ const OperationsJournal = () => {
         try {
           const err = await response.json();
           errorMessage = err.detail || err.message || errorMessage;
-        } catch {
-          // Keep default message.
-        }
+        } catch {}
         throw new Error(errorMessage);
       }
 
@@ -124,9 +122,7 @@ const OperationsJournal = () => {
         try {
           const err = await response.json();
           errorMessage = err.detail || err.message || errorMessage;
-        } catch {
-          // Keep default message.
-        }
+        } catch {}
         throw new Error(errorMessage);
       }
 
