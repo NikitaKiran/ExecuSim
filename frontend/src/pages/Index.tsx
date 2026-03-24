@@ -187,16 +187,23 @@ const MARKET_POINTS = [
   { lat: 40.7128, lng: -74.006, label: "New York" },
   { lat: 51.5074, lng: -0.1278, label: "London" },
   { lat: 35.6762, lng: 139.6503, label: "Tokyo" },
-  { lat: -33.8688, lng: 151.2093, label: "Sydney" },
-  { lat: 48.8566, lng: 2.3522, label: "Paris" },
-  { lat: 28.6139, lng: 77.209, label: "Mumbai" },
-  { lat: 55.7558, lng: 37.6173, label: "Moscow" },
+  { lat: 22.3193, lng: 114.1694, label: "Hong Kong" },
   { lat: 31.2304, lng: 121.4737, label: "Shanghai" },
-  { lat: 25.2048, lng: 55.2708, label: "Dubai" },
   { lat: 1.3521, lng: 103.8198, label: "Singapore" },
-  { lat: 37.5665, lng: 126.978, label: "Seoul" },
-  { lat: -23.5505, lng: -46.6333, label: "São Paulo" },
+  { lat: -33.8688, lng: 151.2093, label: "Sydney" },
+  { lat: 50.1109, lng: 8.6821, label: "Frankfurt" },
+  { lat: 48.8566, lng: 2.3522, label: "Paris" },
+  { lat: 25.2048, lng: 55.2708, label: "Dubai" },
   { lat: 19.076, lng: 72.8777, label: "Mumbai" },
+  { lat: 28.6139, lng: 77.209, label: "New Delhi" },
+  { lat: 37.5665, lng: 126.978, label: "Seoul" },
+  { lat: 55.7558, lng: 37.6173, label: "Moscow" },
+  { lat: -23.5505, lng: -46.6333, label: "Sao Paulo" },
+  { lat: 43.6532, lng: -79.3832, label: "Toronto" },
+  { lat: 41.3851, lng: 2.1734, label: "Barcelona" },
+  { lat: 47.3769, lng: 8.5417, label: "Zurich" },
+  { lat: 35.6892, lng: 51.389, label: "Tehran" },
+  { lat: -26.2041, lng: 28.0473, label: "Johannesburg" },
 ];
 
 const GlobeSection = () => {
@@ -354,7 +361,7 @@ const Index = () => {
 
             <div className="grid grid-cols-3 gap-4 mt-8">
               {[
-                { value: "13", label: "MARKETS" },
+                { value: "20", label: "MARKETS" },
                 { value: "2", label: "STRATEGIES" },
                 { value: "GA", label: "OPTIMIZER" },
               ].map((stat) => (
@@ -370,7 +377,7 @@ const Index = () => {
           <div className="relative h-[420px] w-full overflow-hidden rounded-xl border border-cyan-500/20 bg-[#020d18] shadow-[0_0_40px_rgba(0,200,255,0.08)]">
             <div className="absolute top-4 left-4 z-10 pointer-events-none">
               <p className="font-mono text-xs text-cyan-400 tracking-widest">MARKETS TRADING NOW</p>
-              <p className="font-mono text-[10px] text-muted-foreground mt-0.5">13 major financial centers</p>
+              <p className="font-mono text-[10px] text-muted-foreground mt-0.5">20 major financial centers</p>
             </div>
             <GlobeSection />
           </div>
