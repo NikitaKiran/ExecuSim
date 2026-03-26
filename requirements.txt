@@ -55,3 +55,4 @@ psycopg2
 dotenv
 sqlalchemy
 fastapi
+motion
