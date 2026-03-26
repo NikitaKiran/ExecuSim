@@ -31,6 +31,10 @@ class SimulationRequest(BaseModel):
     data_start: str = Field(..., description="Market data fetch start date (YYYY-MM-DD)")
     data_end: str = Field(..., description="Market data fetch end date (YYYY-MM-DD)")
     interval: str = Field(default="5m", description="Candle interval")
+    # Optional VWAP tuning parameters (used when strategy = VWAP)
+    slice_frequency: int = Field(default=5, ge=1, description="Sample every N candles")
+    participation_cap: float = Field(default=0.1, gt=0.0, le=1.0, description="Max participation rate per candle")
+    aggressiveness: float = Field(default=1.0, gt=0.0, le=2.0, description="Volume weight multiplier")
 
 
 class CompareRequest(BaseModel):
@@ -43,6 +47,10 @@ class CompareRequest(BaseModel):
     data_start: str = Field(..., description="Market data fetch start date (YYYY-MM-DD)")
     data_end: str = Field(..., description="Market data fetch end date (YYYY-MM-DD)")
     interval: str = Field(default="5m", description="Candle interval")
+    # Optional VWAP parameter overrides for compare workflow
+    slice_frequency: int = Field(default=5, ge=1, description="Sample every N candles")
+    participation_cap: float = Field(default=0.1, gt=0.0, le=1.0, description="Max participation rate per candle")
+    aggressiveness: float = Field(default=1.0, gt=0.0, le=2.0, description="Volume weight multiplier")
 
 
 # ==========================================
@@ -110,6 +118,7 @@ class CompareResponse(BaseModel):
     order: dict
     comparisons: List[StrategyComparison]
     recommendation: str
+    vwap_parameters: Optional[dict] = None
     operation_id: Optional[str] = None
 
 

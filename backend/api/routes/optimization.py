@@ -62,18 +62,29 @@ DEFAULT_PARAM_BOUNDS = {
 
 
 def _build_order(req, market_data) -> ParentOrder:
-
-    first_day = market_data.index[0].date()
-
     market_tz = pytz.timezone("US/Eastern")
 
-    # Interpret user input as market time
-    start_local = market_tz.localize(pd.Timestamp(f"{first_day} {req.start_time}"))
-    end_local = market_tz.localize(pd.Timestamp(f"{first_day} {req.end_time}"))
+    def _to_utc_timestamp(raw_value: str, fallback_date) -> pd.Timestamp:
+        value = str(raw_value).strip()
 
-    # Convert to UTC (matches market_data index)
-    start_time = start_local.astimezone(pytz.UTC)
-    end_time = end_local.astimezone(pytz.UTC)
+        # Support either time-only strings (HH:MM[:SS]) or full datetimes.
+        if ":" in value and "-" not in value and "T" not in value:
+            parsed = pd.Timestamp(f"{fallback_date} {value}")
+        else:
+            parsed = pd.to_datetime(value)
+
+        if parsed.tzinfo is None:
+            localized = market_tz.localize(parsed.to_pydatetime())
+            parsed = pd.Timestamp(localized)
+        else:
+            parsed = parsed.tz_convert(market_tz)
+
+        return parsed.tz_convert(pytz.UTC)
+
+    start_day = pd.to_datetime(req.data_start).date()
+    end_day = pd.to_datetime(req.data_end).date()
+    start_time = _to_utc_timestamp(req.start_time, start_day)
+    end_time = _to_utc_timestamp(req.end_time, end_day)
 
     return ParentOrder(
         ticker=req.ticker,
@@ -91,7 +102,9 @@ def _make_vwap_strategy(params: dict):
     """
     kwargs = {
         "slice_frequency": int(params.get("slice_frequency", 1)),
-        "participation_cap": float(params.get("participation_cap", 1.0)),
+        "volume_participation_cap": float(
+            params.get("volume_participation_cap", params.get("participation_cap", 0.2))
+        ),
         "aggressiveness": float(params.get("aggressiveness", 1.0)),
     }
     return StrategyFactory.create("VWAP", kwargs)

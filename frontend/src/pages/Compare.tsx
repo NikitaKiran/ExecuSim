@@ -11,10 +11,19 @@ const Compare = () => {
     startTime: "09:30", endTime: "16:00",
     startDate: "", endDate: "",
     interval: "5m",
+    sliceFrequency: "5",
+    participationCap: "0.1",
+    aggressiveness: "1.0",
   });
   const [result, setResult] = useState<any>(null);
+  const [usedVwapParams, setUsedVwapParams] = useState<{
+    slice_frequency: number;
+    participation_cap: number;
+    aggressiveness: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showParamsInfo, setShowParamsInfo] = useState(false);
 
   const update = (key: string, val: string) => setForm((f) => ({ ...f, [key]: val }));
 
@@ -31,8 +40,28 @@ const Compare = () => {
       return;
     }
 
+    const sliceFrequency = parseInt(form.sliceFrequency);
+    const participationCap = parseFloat(form.participationCap);
+    const aggressiveness = parseFloat(form.aggressiveness);
+
+    if (isNaN(sliceFrequency) || sliceFrequency < 1) {
+      setError("Slice frequency must be 1 or greater.");
+      return;
+    }
+
+    if (isNaN(participationCap) || participationCap <= 0 || participationCap > 1) {
+      setError("Participation cap must be between 0 and 1.");
+      return;
+    }
+
+    if (isNaN(aggressiveness) || aggressiveness <= 0 || aggressiveness > 2) {
+      setError("Aggressiveness must be greater than 0 and at most 2.");
+      return;
+    }
+
     setError(null);
     setResult(null);
+    setUsedVwapParams(null);
     setLoading(true);
 
     try {
@@ -48,6 +77,9 @@ const Compare = () => {
           data_start: form.startDate,
           data_end: form.endDate,
           interval: form.interval,
+          slice_frequency: sliceFrequency,
+          participation_cap: participationCap,
+          aggressiveness,
         }),
       });
 
@@ -62,6 +94,11 @@ const Compare = () => {
 
       const data = await response.json();
       setResult(data);
+      setUsedVwapParams(data?.vwap_parameters ?? {
+        slice_frequency: sliceFrequency,
+        participation_cap: participationCap,
+        aggressiveness,
+      });
     } catch (err: any) {
       console.error("Compare fetch failed:", err);
       setError(err.message || "Failed to run comparison. Please try again.");
@@ -106,6 +143,62 @@ const Compare = () => {
           <TimeWheelPicker label="END TIME" value={form.endTime} onChange={(v) => update("endTime", v)}/>
           <SelectField label="INTERVAL" value={form.interval} onChange={(v) => update("interval", v)} options={["1m", "5m", "15m", "1h"]} />
         </div>
+
+        <div className="mt-6 border-t border-border pt-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-mono text-xs tracking-widest text-muted-foreground">
+              STRATEGY TUNING PARAMETERS
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowParamsInfo(!showParamsInfo)}
+              className="text-xs font-mono text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+            >
+              {showParamsInfo ? "Hide explanation" : "What do these mean?"}
+              <span className="text-sm">{showParamsInfo ? "▲" : "▼"}</span>
+            </button>
+          </div>
+
+          {showParamsInfo && (
+            <div className="mb-6 text-xs text-muted-foreground font-mono space-y-3 bg-muted/50 p-4 rounded-md border border-border/50">
+              <p>
+                <strong>Slice Frequency</strong> — Number of time slices per trading day.<br />
+                Higher values = more granular schedule (e.g. 5 = new slice every ~78 minutes on a 6.5h day).
+              </p>
+              <p>
+                <strong>Participation Capital</strong> — Maximum % of market volume the strategy will take in any slice (0.01–1.0).<br />
+                0.10 means the strategy will never buy/sell more than 10% of the volume in that slice.
+              </p>
+              <p>
+                <strong>Aggressiveness</strong> — How far the strategy deviates from pure VWAP to finish the order (0.1 = very conservative, 1.0 = neutral, &gt;1 = aggressive).
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <Field
+              label="SLICE FREQUENCY"
+              value={form.sliceFrequency}
+              onChange={(v) => update("sliceFrequency", v)}
+              type="number"
+            />
+            <Field
+              label="PARTICIPATION CAPITAL"
+              value={form.participationCap}
+              onChange={(v) => update("participationCap", v)}
+              type="number"
+            />
+            <Field
+              label="AGGRESSIVENESS"
+              value={form.aggressiveness}
+              onChange={(v) => update("aggressiveness", v)}
+              type="number"
+            />
+          </div>
+          <p className="font-mono text-xs text-muted-foreground/80 mt-3">
+            These parameters are applied only to VWAP during comparison.
+          </p>
+        </div>
       </section>
 
       <button
@@ -141,6 +234,22 @@ const Compare = () => {
         <>
           <section className="border border-border bg-card p-6 mt-6">
             <h2 className="font-mono text-xs tracking-widest text-muted-foreground mb-4">COMPARISON TABLE</h2>
+            {usedVwapParams && (
+              <div className="mb-4 border border-border/60 bg-muted/40 rounded-md p-3">
+                <p className="font-mono text-xs tracking-widest text-muted-foreground mb-2">VWAP PARAMETERS USED</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div className="font-mono text-xs text-foreground">
+                    Slice Frequency: <span className="text-signal-green">{usedVwapParams.slice_frequency}</span>
+                  </div>
+                  <div className="font-mono text-xs text-foreground">
+                    Participation Cap: <span className="text-signal-green">{usedVwapParams.participation_cap}</span>
+                  </div>
+                  <div className="font-mono text-xs text-foreground">
+                    Aggressiveness: <span className="text-signal-green">{usedVwapParams.aggressiveness}</span>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full font-body text-sm">
                 <thead>

@@ -51,15 +51,27 @@ router = APIRouter(prefix="/execution", tags=["Execution"])
 def _build_parent_order(req, market_data) -> ParentOrder:
     market_tz = pytz.timezone("US/Eastern")
 
+    def _to_utc_timestamp(raw_value: str, fallback_date) -> pd.Timestamp:
+        value = str(raw_value).strip()
+
+        # Support either time-only strings (HH:MM[:SS]) or full datetimes.
+        if ":" in value and "-" not in value and "T" not in value:
+            parsed = pd.Timestamp(f"{fallback_date} {value}")
+        else:
+            parsed = pd.to_datetime(value)
+
+        if parsed.tzinfo is None:
+            localized = market_tz.localize(parsed.to_pydatetime())
+            parsed = pd.Timestamp(localized)
+        else:
+            parsed = parsed.tz_convert(market_tz)
+
+        return parsed.tz_convert(pytz.UTC)
+
     start_date = pd.to_datetime(req.data_start).date()
     end_date = pd.to_datetime(req.data_end).date()
-
-    # Force regular market hours (9:30 – 16:00 ET)
-    start_local = market_tz.localize(pd.Timestamp(f"{start_date} 09:30:00"))
-    end_local = market_tz.localize(pd.Timestamp(f"{end_date} 16:00:00"))
-
-    start_time = start_local.astimezone(pytz.UTC)
-    end_time = end_local.astimezone(pytz.UTC)
+    start_time = _to_utc_timestamp(req.start_time, start_date)
+    end_time = _to_utc_timestamp(req.end_time, end_date)
 
     return ParentOrder(
         ticker=req.ticker,
@@ -74,13 +86,14 @@ def _run_single_strategy(
     market_data: pd.DataFrame,
     order: ParentOrder,
     strategy_name: str,
+    strategy_params: dict | None = None,
 ) -> dict:
     """
     Run a single strategy and compute all cost metrics.
     Returns a dict with 'metrics', 'logs_df', 'log_entries'.
     """
     try:
-        strategy = StrategyFactory.create(strategy_name)
+        strategy = StrategyFactory.create(strategy_name, strategy_params)
     except ValueError as exc:
         raise HTTPException(
             status_code=400,
@@ -199,7 +212,15 @@ def run_simulation(
 
         order = _build_parent_order(req, market_data)
 
-        result = _run_single_strategy(market_data, order, req.strategy)
+        strategy_params = None
+        if req.strategy == "VWAP":
+            strategy_params = {
+                "slice_frequency": req.slice_frequency,
+                "participation_cap": req.participation_cap,
+                "aggressiveness": req.aggressiveness,
+            }
+
+        result = _run_single_strategy(market_data, order, req.strategy, strategy_params)
 
         df_logs = result["df_logs"]
         experiment_id = save_experiment(
@@ -276,8 +297,15 @@ def compare_strategies(
         comparisons = []
         results = {}
 
+        vwap_params = {
+            "slice_frequency": req.slice_frequency,
+            "participation_cap": req.participation_cap,
+            "aggressiveness": req.aggressiveness,
+        }
+
         for strat_name in ["TWAP", "VWAP"]:
-            result = _run_single_strategy(market_data, order, strat_name)
+            params = vwap_params if strat_name == "VWAP" else None
+            result = _run_single_strategy(market_data, order, strat_name, params)
             comparisons.append(StrategyComparison(
                 strategy=strat_name,
                 metrics=result["metrics"],
@@ -311,6 +339,7 @@ def compare_strategies(
             },
             comparisons=comparisons,
             recommendation=recommendation,
+            vwap_parameters=vwap_params,
         )
 
         response_dict = response_payload.dict()

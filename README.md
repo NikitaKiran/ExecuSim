@@ -366,6 +366,9 @@ Compare TWAP and VWAP on the same parent order. Returns metrics for both strateg
 | `data_start` | string | Yes | — | Market data fetch start (`YYYY-MM-DD`) |
 | `data_end` | string | Yes | — | Market data fetch end (`YYYY-MM-DD`) |
 | `interval` | string | No | `"5m"` | Candle interval |
+| `slice_frequency` | int | No | `1` | VWAP only: sample every N candles (>= 1) |
+| `participation_cap` | float | No | `0.2` | VWAP only: max participation per candle (0, 1] |
+| `aggressiveness` | float | No | `1.0` | VWAP only: volume weight multiplier (0, 2] |
 
 **Example Request**
 ```json
@@ -377,7 +380,10 @@ Compare TWAP and VWAP on the same parent order. Returns metrics for both strateg
   "end_time": "2026-03-05T16:00:00Z",
   "data_start": "2026-03-01",
   "data_end": "2026-03-05",
-  "interval": "5m"
+  "interval": "5m",
+  "slice_frequency": 3,
+  "participation_cap": 0.15,
+  "aggressiveness": 1.2
 }
 ```
 
@@ -413,9 +419,18 @@ Compare TWAP and VWAP on the same parent order. Returns metrics for both strateg
       }
     }
   ],
-  "recommendation": "VWAP produced lower slippage ($0.0600) vs TWAP ($0.1300). VWAP is recommended for this execution window."
+  "recommendation": "VWAP produced lower slippage ($0.0600) vs TWAP ($0.1300). VWAP is recommended for this execution window.",
+  "vwap_parameters": {
+    "slice_frequency": 3,
+    "participation_cap": 0.15,
+    "aggressiveness": 1.2
+  }
 }
 ```
+
+Notes:
+- TWAP remains unchanged.
+- `vwap_parameters` in the response shows the exact values used for the VWAP leg of the comparison.
 
 **Error Responses**
 - `400` — Market data error, empty schedule, or no fills

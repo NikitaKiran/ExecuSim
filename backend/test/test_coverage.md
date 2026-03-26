@@ -8,7 +8,7 @@
 | Market Data | 7 | `POST /api/data/market` |
 | Execution — List | 1 | `GET /api/execution/strategies` |
 | Execution — Simulate | 13 | `POST /api/execution/simulate` |
-| Execution — Compare | 6 | `POST /api/execution/compare` |
+| Execution — Compare | 7 | `POST /api/execution/compare` |
 | Optimization — Params | 1 | `GET /api/optimization/params` |
 | Optimization — Evaluate | 4 | `POST /api/optimization/evaluate` |
 | Optimization — GA | 8 | `POST /api/optimization/optimize` |
@@ -16,7 +16,7 @@
 | DB Persistence | 4 | (verifies DB rows via SQLAlchemy) |
 | End-to-End | 1 | All endpoints in sequence |
 | Edge Cases | 6 | Various error/edge scenarios |
-| **Total** | **58** | |
+| **Total** | **59** | |
 
 ---
 
@@ -74,6 +74,7 @@
 | `test_compare_metrics_structure` | `POST /api/execution/compare` | Both strategies have valid metrics |
 | `test_compare_order_echo` | `POST /api/execution/compare` | Response echoes order fields |
 | `test_compare_sell_side` | `POST /api/execution/compare` | SELL side works |
+| `test_compare_with_custom_vwap_params` | `POST /api/execution/compare` | Accepts custom VWAP params and echoes `vwap_parameters` in response |
 | `test_compare_missing_fields` | `POST /api/execution/compare` | Partial body → 422 |
 
 ### 6. Optimization — Params (`TestOptimizationParams`)
@@ -151,7 +152,7 @@
 | `/api/data/market` | POST | ✅ | ✅ (invalid ticker, start>end) | ✅ (missing fields, empty body) | — |
 | `/api/execution/strategies` | GET | ✅ | — | — | — |
 | `/api/execution/simulate` | POST | ✅ (TWAP, VWAP, SELL) | ✅ (invalid strategy, bad qty, large/small) | ✅ (missing fields, invalid JSON, extra fields) | ✅ (experiment + logs) |
-| `/api/execution/compare` | POST | ✅ (BUY, SELL) | — | ✅ (missing fields) | — |
+| `/api/execution/compare` | POST | ✅ (BUY, SELL, custom VWAP params) | — | ✅ (missing fields) | — |
 | `/api/optimization/params` | GET | ✅ | — | — | — |
 | `/api/optimization/evaluate` | POST | ✅ (multiple param sets) | — | ✅ (missing params) | — |
 | `/api/optimization/optimize` | POST | ✅ (basic, seed, metadata) | — | ✅ (missing fields) | ✅ (experiment + params) |

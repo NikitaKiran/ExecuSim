@@ -548,6 +548,24 @@ class TestExecutionCompare:
         assert len(r.json()["comparisons"]) == 2
         logger.info("Compare works for SELL side")
 
+    def test_compare_with_custom_vwap_params(self, base_order_payload):
+        payload = {
+            **base_order_payload,
+            "slice_frequency": 3,
+            "participation_cap": 0.15,
+            "aggressiveness": 1.2,
+        }
+        r = requests.post(f"{API_URL}/execution/compare", json=payload)
+        assert r.status_code == 200
+        data = r.json()
+        assert "comparisons" in data
+        assert len(data["comparisons"]) == 2
+        assert "vwap_parameters" in data
+        assert data["vwap_parameters"]["slice_frequency"] == 3
+        assert data["vwap_parameters"]["participation_cap"] == 0.15
+        assert data["vwap_parameters"]["aggressiveness"] == 1.2
+        logger.info("Compare accepts custom VWAP params")
+
     def test_compare_missing_fields(self):
         r = requests.post(f"{API_URL}/execution/compare", json={"ticker": "AAPL"})
         assert r.status_code == 422
