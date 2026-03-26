@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 import { apiFetch } from "@/lib/api";
 import OperationExplainPanel from "@/components/OperationExplainPanel";
+import { asString, normalizeSide, type ReplayOperation } from "@/lib/replayOperation";
+import { useLocation } from "react-router-dom";
 
 import {
   ComposedChart,
@@ -17,6 +19,8 @@ import {
 } from "recharts";
 
 const Simulation = () => {
+  const location = useLocation();
+  const replayRunRef = useRef<string | null>(null);
   const [form, setForm] = useState({
     ticker: "",
     side: "Buy",
@@ -38,12 +42,13 @@ const Simulation = () => {
     setForm((f) => ({ ...f, [key]: val ?? f[key as keyof typeof f] }));
   };
 
-  const runSimulation = async () => {
+  const runSimulation = async (formOverride?: typeof form) => {
+    const activeForm = formOverride ?? form;
     setError(null);
     setResult(null);
     setLoading(true);
 
-    if (!form.startDate || !form.endDate || !form.quantity || parseInt(form.quantity) <= 0) {
+    if (!activeForm.startDate || !activeForm.endDate || !activeForm.quantity || parseInt(activeForm.quantity) <= 0) {
       setError("Please fill all required fields with valid values.");
       setLoading(false);
       return;
@@ -51,15 +56,15 @@ const Simulation = () => {
 
     try {
       const payload = {
-        ticker: form.ticker,
-        side: form.side.toUpperCase(),
-        quantity: parseInt(form.quantity),
-        start_time: form.startTime,
-        end_time: form.endTime,
-        data_start: form.startDate,
-        data_end: form.endDate,
-        interval: form.interval,
-        strategy: form.strategy.toUpperCase(),
+        ticker: activeForm.ticker,
+        side: activeForm.side.toUpperCase(),
+        quantity: parseInt(activeForm.quantity),
+        start_time: activeForm.startTime,
+        end_time: activeForm.endTime,
+        data_start: activeForm.startDate,
+        data_end: activeForm.endDate,
+        interval: activeForm.interval,
+        strategy: activeForm.strategy.toUpperCase(),
       };
 
       console.log("Sending payload:", payload);
@@ -94,6 +99,31 @@ const Simulation = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const replayOperation = (location.state as { replayOperation?: ReplayOperation } | null)
+      ?.replayOperation;
+    if (!replayOperation) return;
+    if (replayOperation.operationType.toLowerCase() !== "simulate") return;
+    if (replayRunRef.current === replayOperation.operationId) return;
+
+    replayRunRef.current = replayOperation.operationId;
+    const payload = replayOperation.requestPayload ?? {};
+    const replayForm = {
+      ticker: asString(payload.ticker),
+      side: normalizeSide(payload.side, "title"),
+      quantity: asString(payload.quantity),
+      startTime: asString(payload.start_time, "09:30"),
+      endTime: asString(payload.end_time, "16:00"),
+      startDate: asString(payload.data_start),
+      endDate: asString(payload.data_end),
+      interval: asString(payload.interval, "5m"),
+      strategy: asString(payload.strategy, "VWAP").toUpperCase(),
+    };
+
+    setForm(replayForm);
+    runSimulation(replayForm);
+  }, [location.state]);
 
   // Prepare chart data
   const chartData = result?.execution_logs?.map((log: any, i: number) => {
@@ -199,7 +229,7 @@ const Simulation = () => {
       </section>
 
       <button
-        onClick={runSimulation}
+        onClick={() => runSimulation()}
         disabled={loading}
         className={`w-full font-mono text-sm tracking-widest py-4 transition-colors border border-border mt-4 rounded-md ${
           loading ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary hover:bg-primary/80 text-primary-foreground"

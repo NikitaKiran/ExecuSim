@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import OperationExplainPanel from "@/components/OperationExplainPanel";
 import { apiFetch } from "@/lib/api";
+import { routeForOperationType, type ReplayOperation } from "@/lib/replayOperation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useNavigate } from "react-router-dom";
 
 type OperationRecord = {
   id: string;
@@ -123,6 +125,7 @@ const instrumentNameForOperation = (operation: OperationRecord): string => {
 const RESPONSE_PAYLOAD_PREVIEW_LINES = 18;
 
 const OperationsJournal = () => {
+  const navigate = useNavigate();
   const [operations, setOperations] = useState<OperationRecord[]>([]);
   const [historyItems, setHistoryItems] = useState<SummaryHistoryItem[]>([]);
   const [expandedSummaryIds, setExpandedSummaryIds] = useState<string[]>([]);
@@ -291,6 +294,19 @@ const OperationsJournal = () => {
     setExpandedLinkedIds((curr) =>
       curr.includes(id) ? curr.filter((item) => item !== id) : [...curr, id]
     );
+  };
+
+  const runOperationAgain = (operation: OperationRecord) => {
+    const targetRoute = routeForOperationType(operation.operation_type);
+    if (!targetRoute) return;
+
+    const replayOperation: ReplayOperation = {
+      operationId: operation.id,
+      operationType: operation.operation_type,
+      requestPayload: operation.request_payload ?? {},
+    };
+
+    navigate(targetRoute, { state: { replayOperation } });
   };
 
   return (
@@ -462,6 +478,14 @@ const OperationsJournal = () => {
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 className="font-mono text-xs tracking-widest text-muted-foreground">OPERATION DETAILS</h2>
             <div className="flex items-center gap-2">
+              {routeForOperationType(activeOperation.operation_type) && (
+                <button
+                  onClick={() => runOperationAgain(activeOperation)}
+                  className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted"
+                >
+                  RUN THIS AGAIN
+                </button>
+              )}
               <button
                 onClick={() => {
                   setSelectedIds((curr) => (curr.includes(activeOperation.id) ? curr : [...curr, activeOperation.id]));

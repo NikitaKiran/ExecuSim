@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import { apiFetch } from "@/lib/api";
 import OperationExplainPanel from "@/components/OperationExplainPanel";
+import { asString, type ReplayOperation } from "@/lib/replayOperation";
+import { useLocation } from "react-router-dom";
 import {
   ComposedChart,
   Bar,
@@ -15,6 +17,8 @@ import {
 } from "recharts";
 
 const MarketData = () => {
+  const location = useLocation();
+  const replayRunRef = useRef<string | null>(null);
   const [ticker, setTicker] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -33,8 +37,22 @@ const MarketData = () => {
     }) + " IST";
   };
 
-  const fetchData = async () => {
-    if (!ticker || !startDate || !endDate || !interval) {
+  const fetchData = async (formOverride?: {
+    ticker: string;
+    startDate: string;
+    endDate: string;
+    interval: string;
+  }) => {
+    const activeValues =
+      formOverride ??
+      ({ ticker, startDate, endDate, interval } as {
+        ticker: string;
+        startDate: string;
+        endDate: string;
+        interval: string;
+      });
+
+    if (!activeValues.ticker || !activeValues.startDate || !activeValues.endDate || !activeValues.interval) {
       setError("Please fill in all fields: ticker, start date, end date, and interval.");
       return;
     }
@@ -48,10 +66,10 @@ const MarketData = () => {
       const response = await apiFetch("/api/data/market", {
         method: "POST",
         body: JSON.stringify({
-          ticker,
-          start: startDate,
-          end: endDate,
-          interval,
+          ticker: activeValues.ticker,
+          start: activeValues.startDate,
+          end: activeValues.endDate,
+          interval: activeValues.interval,
         }),
       });
 
@@ -74,6 +92,30 @@ const MarketData = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const replayOperation = (location.state as { replayOperation?: ReplayOperation } | null)
+      ?.replayOperation;
+    if (!replayOperation) return;
+    if (replayOperation.operationType.toLowerCase() !== "market_data") return;
+    if (replayRunRef.current === replayOperation.operationId) return;
+
+    replayRunRef.current = replayOperation.operationId;
+    const payload = replayOperation.requestPayload ?? {};
+
+    const replayValues = {
+      ticker: asString(payload.ticker),
+      startDate: asString(payload.start),
+      endDate: asString(payload.end),
+      interval: asString(payload.interval, "1d"),
+    };
+
+    setTicker(replayValues.ticker);
+    setStartDate(replayValues.startDate);
+    setEndDate(replayValues.endDate);
+    setInterval(replayValues.interval);
+    fetchData(replayValues);
+  }, [location.state]);
 
   const { priceMin, priceMax, domainMin, domainMax } = useMemo(() => {
     if (!data || data.length === 0) {
@@ -177,7 +219,7 @@ const MarketData = () => {
       </section>
 
       <button
-        onClick={fetchData}
+        onClick={() => fetchData()}
         disabled={loading}
         className={`w-full font-mono text-sm tracking-widest py-4 transition-colors border border-border mt-4 rounded-md ${
           loading

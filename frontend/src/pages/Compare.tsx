@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { apiFetch } from "@/lib/api";
 import OperationExplainPanel from "@/components/OperationExplainPanel";
+import { asString, normalizeSide, type ReplayOperation } from "@/lib/replayOperation";
+import { useLocation } from "react-router-dom";
 
 const Compare = () => {
+  const location = useLocation();
+  const replayRunRef = useRef<string | null>(null);
   const [form, setForm] = useState({
     ticker: "", side: "BUY", quantity: "10000",
     startTime: "09:30", endTime: "16:00",
@@ -27,22 +31,23 @@ const Compare = () => {
 
   const update = (key: string, val: string) => setForm((f) => ({ ...f, [key]: val }));
 
-  const run = async () => {
-    if (!form.ticker || !form.side || !form.quantity || !form.startDate || !form.endDate || !form.startTime || !form.endTime || !form.interval) {
+  const run = async (formOverride?: typeof form) => {
+    const activeForm = formOverride ?? form;
+    if (!activeForm.ticker || !activeForm.side || !activeForm.quantity || !activeForm.startDate || !activeForm.endDate || !activeForm.startTime || !activeForm.endTime || !activeForm.interval) {
       setError("Please fill in all fields.");
       return;
     }
 
-    const startDT = new Date(`${form.startDate}T${form.startTime}`);
-    const endDT = new Date(`${form.endDate}T${form.endTime}`);
+    const startDT = new Date(`${activeForm.startDate}T${activeForm.startTime}`);
+    const endDT = new Date(`${activeForm.endDate}T${activeForm.endTime}`);
     if (startDT >= endDT) {
       setError("Start date/time must be before end date/time.");
       return;
     }
 
-    const sliceFrequency = parseInt(form.sliceFrequency);
-    const participationCap = parseFloat(form.participationCap);
-    const aggressiveness = parseFloat(form.aggressiveness);
+    const sliceFrequency = parseInt(activeForm.sliceFrequency);
+    const participationCap = parseFloat(activeForm.participationCap);
+    const aggressiveness = parseFloat(activeForm.aggressiveness);
 
     if (isNaN(sliceFrequency) || sliceFrequency < 1) {
       setError("Slice frequency must be 1 or greater.");
@@ -69,14 +74,14 @@ const Compare = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ticker: form.ticker,
-          side: form.side,
-          quantity: parseInt(form.quantity),
-          start_time: form.startTime,
-          end_time: form.endTime,
-          data_start: form.startDate,
-          data_end: form.endDate,
-          interval: form.interval,
+          ticker: activeForm.ticker,
+          side: activeForm.side,
+          quantity: parseInt(activeForm.quantity),
+          start_time: activeForm.startTime,
+          end_time: activeForm.endTime,
+          data_start: activeForm.startDate,
+          data_end: activeForm.endDate,
+          interval: activeForm.interval,
           slice_frequency: sliceFrequency,
           participation_cap: participationCap,
           aggressiveness,
@@ -106,6 +111,33 @@ const Compare = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const replayOperation = (location.state as { replayOperation?: ReplayOperation } | null)
+      ?.replayOperation;
+    if (!replayOperation) return;
+    if (replayOperation.operationType.toLowerCase() !== "compare") return;
+    if (replayRunRef.current === replayOperation.operationId) return;
+
+    replayRunRef.current = replayOperation.operationId;
+    const payload = replayOperation.requestPayload ?? {};
+    const replayForm = {
+      ticker: asString(payload.ticker),
+      side: normalizeSide(payload.side, "upper"),
+      quantity: asString(payload.quantity),
+      startTime: asString(payload.start_time, "09:30"),
+      endTime: asString(payload.end_time, "16:00"),
+      startDate: asString(payload.data_start),
+      endDate: asString(payload.data_end),
+      interval: asString(payload.interval, "5m"),
+      sliceFrequency: asString(payload.slice_frequency, "5"),
+      participationCap: asString(payload.participation_cap, "0.1"),
+      aggressiveness: asString(payload.aggressiveness, "1.0"),
+    };
+
+    setForm(replayForm);
+    run(replayForm);
+  }, [location.state]);
 
   const twapMetrics = result?.comparisons?.find((c: any) => c.strategy === "TWAP")?.metrics;
   const vwapMetrics = result?.comparisons?.find((c: any) => c.strategy === "VWAP")?.metrics;
@@ -202,7 +234,7 @@ const Compare = () => {
       </section>
 
       <button
-        onClick={run}
+        onClick={() => run()}
         disabled={loading}
         className={`w-full font-mono text-sm tracking-widest py-4 transition-colors border border-border mt-4 ${
           loading

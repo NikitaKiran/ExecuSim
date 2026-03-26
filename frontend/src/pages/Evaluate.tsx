@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 import { apiFetch } from "@/lib/api";
 import OperationExplainPanel from "@/components/OperationExplainPanel";
+import { asString, normalizeSide, type ReplayOperation } from "@/lib/replayOperation";
+import { useLocation } from "react-router-dom";
 
 const Evaluate = () => {
+  const location = useLocation();
+  const replayRunRef = useRef<string | null>(null);
   const [form, setForm] = useState({
     ticker: "",
     side: "Buy",
@@ -29,16 +33,17 @@ const Evaluate = () => {
     setForm((f) => ({ ...f, [key]: val ?? f[key as keyof typeof f] }));
   };
 
-  const runEvaluation = async () => {
+  const runEvaluation = async (formOverride?: typeof form) => {
+    const activeForm = formOverride ?? form;
     setError(null);
     setResult(null);
     setLoading(true);
 
     if (
-      !form.startDate ||
-      !form.endDate ||
-      !form.quantity ||
-      parseInt(form.quantity) <= 0
+      !activeForm.startDate ||
+      !activeForm.endDate ||
+      !activeForm.quantity ||
+      parseInt(activeForm.quantity) <= 0
     ) {
       setError("Please fill all required fields (ticker, side, quantity, dates) with valid values.");
       setLoading(false);
@@ -46,23 +51,23 @@ const Evaluate = () => {
     }
 
     try {
-      const sliceFreq = parseInt(form.sliceFrequency);
-      const partCap = parseFloat(form.participationCapital);
-      const agg = parseFloat(form.aggressiveness);
+      const sliceFreq = parseInt(activeForm.sliceFrequency);
+      const partCap = parseFloat(activeForm.participationCapital);
+      const agg = parseFloat(activeForm.aggressiveness);
 
       if (isNaN(sliceFreq) || sliceFreq < 1) throw new Error("Slice frequency must be ≥ 1");
       if (isNaN(partCap) || partCap < 0.01 || partCap > 1) throw new Error("Participation capital must be 0.01–1.0");
       if (isNaN(agg) || agg < 0.1) throw new Error("Aggressiveness must be ≥ 0.1");
 
       const payload = {
-        ticker: form.ticker,
-        side: form.side.toUpperCase(),
-        quantity: parseInt(form.quantity),
-        start_time: form.startTime,
-        end_time: form.endTime,
-        data_start: form.startDate,
-        data_end: form.endDate,
-        interval: form.interval,
+        ticker: activeForm.ticker,
+        side: activeForm.side.toUpperCase(),
+        quantity: parseInt(activeForm.quantity),
+        start_time: activeForm.startTime,
+        end_time: activeForm.endTime,
+        data_start: activeForm.startDate,
+        data_end: activeForm.endDate,
+        interval: activeForm.interval,
         slice_frequency: sliceFreq,
         participation_cap: partCap,
         aggressiveness: agg,
@@ -107,6 +112,34 @@ const Evaluate = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const replayOperation = (location.state as { replayOperation?: ReplayOperation } | null)
+      ?.replayOperation;
+    if (!replayOperation) return;
+    if (replayOperation.operationType.toLowerCase() !== "evaluate") return;
+    if (replayRunRef.current === replayOperation.operationId) return;
+
+    replayRunRef.current = replayOperation.operationId;
+    const payload = replayOperation.requestPayload ?? {};
+    const replayForm = {
+      ticker: asString(payload.ticker),
+      side: normalizeSide(payload.side, "title"),
+      quantity: asString(payload.quantity),
+      startDate: asString(payload.data_start),
+      endDate: asString(payload.data_end),
+      startTime: asString(payload.start_time, "09:30"),
+      endTime: asString(payload.end_time, "16:00"),
+      interval: asString(payload.interval, "5m"),
+      sliceFrequency: asString(payload.slice_frequency, "5"),
+      participationCapital: asString(payload.participation_cap, "0.10"),
+      aggressiveness: asString(payload.aggressiveness, "1.0"),
+      seed: asString(payload.seed, "42"),
+    };
+
+    setForm(replayForm);
+    runEvaluation(replayForm);
+  }, [location.state]);
 
   return (
     <PageLayout title="EVALUATE PARAMETERS">
@@ -198,7 +231,7 @@ const Evaluate = () => {
       </section>
 
       <button
-        onClick={runEvaluation}
+        onClick={() => runEvaluation()}
         disabled={loading}
         className={`w-full font-mono text-sm tracking-widest py-4 transition-colors border border-border mt-6 rounded-md ${
           loading ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary hover:bg-primary/80 text-primary-foreground"

@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import TimeWheelPicker from "@/components/TimeWheelPicker";
 import { apiFetch } from "@/lib/api";
 import OperationExplainPanel from "@/components/OperationExplainPanel";
+import { asString, normalizeSide, type ReplayOperation } from "@/lib/replayOperation";
+import { useLocation } from "react-router-dom";
 
 const Optimize = () => {
+  const location = useLocation();
+  const replayRunRef = useRef<string | null>(null);
   const [form, setForm] = useState({
     ticker: "", side: "BUY", quantity: "10000",
     startTime: "09:30", endTime: "16:00",
@@ -22,14 +26,18 @@ const Optimize = () => {
   const update = (key: string, val: string) => setForm((f) => ({ ...f, [key]: val }));
   const updateGa = (key: string, val: string) => setGaSettings((f) => ({ ...f, [key]: val }));
 
-  const run = async () => {
-    if (!form.ticker || !form.side || !form.quantity || !form.startDate || !form.endDate || !form.startTime || !form.endTime || !form.interval) {
+  const run = async (formOverride?: typeof form, gaOverride?: typeof gaSettings, advancedOverride?: boolean) => {
+    const activeForm = formOverride ?? form;
+    const activeGa = gaOverride ?? gaSettings;
+    const activeAdvanced = advancedOverride ?? advanced;
+
+    if (!activeForm.ticker || !activeForm.side || !activeForm.quantity || !activeForm.startDate || !activeForm.endDate || !activeForm.startTime || !activeForm.endTime || !activeForm.interval) {
       setError("Please fill in all fields.");
       return;
     }
 
-    const startDT = new Date(`${form.startDate}T${form.startTime}`);
-    const endDT = new Date(`${form.endDate}T${form.endTime}`);
+    const startDT = new Date(`${activeForm.startDate}T${activeForm.startTime}`);
+    const endDT = new Date(`${activeForm.endDate}T${activeForm.endTime}`);
     if (startDT >= endDT) {
       setError("Start date/time must be before end date/time.");
       return;
@@ -41,20 +49,20 @@ const Optimize = () => {
 
     try {
       const body: any = {
-        ticker: form.ticker,
-        side: form.side,
-        quantity: parseInt(form.quantity),
-        start_time: form.startTime,
-        end_time: form.endTime,
-        data_start: form.startDate,
-        data_end: form.endDate,
-        interval: form.interval,
+        ticker: activeForm.ticker,
+        side: activeForm.side,
+        quantity: parseInt(activeForm.quantity),
+        start_time: activeForm.startTime,
+        end_time: activeForm.endTime,
+        data_start: activeForm.startDate,
+        data_end: activeForm.endDate,
+        interval: activeForm.interval,
       };
 
-      if (advanced) {
-        body.population_size = parseInt(gaSettings.populationSize) || 30;
-        body.generations = parseInt(gaSettings.generations) || 20;
-        if (gaSettings.seed) body.seed = parseInt(gaSettings.seed);
+      if (activeAdvanced) {
+        body.population_size = parseInt(activeGa.populationSize) || 30;
+        body.generations = parseInt(activeGa.generations) || 20;
+        if (activeGa.seed) body.seed = parseInt(activeGa.seed);
       }
 
       const response = await apiFetch("/api/optimization/optimize", {
@@ -80,6 +88,44 @@ const Optimize = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const replayOperation = (location.state as { replayOperation?: ReplayOperation } | null)
+      ?.replayOperation;
+    if (!replayOperation) return;
+    if (replayOperation.operationType.toLowerCase() !== "optimize") return;
+    if (replayRunRef.current === replayOperation.operationId) return;
+
+    replayRunRef.current = replayOperation.operationId;
+    const payload = replayOperation.requestPayload ?? {};
+
+    const replayForm = {
+      ticker: asString(payload.ticker),
+      side: normalizeSide(payload.side, "upper"),
+      quantity: asString(payload.quantity),
+      startTime: asString(payload.start_time, "09:30"),
+      endTime: asString(payload.end_time, "16:00"),
+      startDate: asString(payload.data_start),
+      endDate: asString(payload.data_end),
+      interval: asString(payload.interval, "5m"),
+    };
+
+    const hasAdvancedGaSettings =
+      payload.population_size != null ||
+      payload.generations != null ||
+      payload.seed != null;
+
+    const replayGaSettings = {
+      populationSize: asString(payload.population_size, "30"),
+      generations: asString(payload.generations, "20"),
+      seed: asString(payload.seed, "42"),
+    };
+
+    setForm(replayForm);
+    setGaSettings(replayGaSettings);
+    setAdvanced(hasAdvancedGaSettings);
+    run(replayForm, replayGaSettings, hasAdvancedGaSettings);
+  }, [location.state]);
 
   const metrics = result?.best_strategy_metrics;
 
@@ -155,7 +201,7 @@ const Optimize = () => {
 </section>
 
       <button
-        onClick={run}
+        onClick={() => run()}
         disabled={loading}
         className={`w-full font-mono text-sm tracking-widest py-4 transition-colors border border-border mt-4 ${
           loading
