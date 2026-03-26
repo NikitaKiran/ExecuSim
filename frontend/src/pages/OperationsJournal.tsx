@@ -68,6 +68,58 @@ const formatCreatedAt = (value: string): string => {
   }).format(dt);
 };
 
+const INSTRUMENT_KEYS = new Set([
+  "instrument",
+  "instrument_name",
+  "ticker",
+  "symbol",
+  "asset",
+  "pair",
+  "security",
+  "stock",
+]);
+
+const findInstrumentValue = (value: unknown, depth = 0): string | null => {
+  if (depth > 4 || value == null) return null;
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findInstrumentValue(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  if (typeof value !== "object") return null;
+
+  const record = value as Record<string, unknown>;
+
+  for (const [key, fieldValue] of Object.entries(record)) {
+    if (
+      INSTRUMENT_KEYS.has(key.toLowerCase()) &&
+      typeof fieldValue === "string" &&
+      fieldValue.trim()
+    ) {
+      return fieldValue.trim();
+    }
+  }
+
+  for (const nested of Object.values(record)) {
+    const found = findInstrumentValue(nested, depth + 1);
+    if (found) return found;
+  }
+
+  return null;
+};
+
+const instrumentNameForOperation = (operation: OperationRecord): string => {
+  return (
+    findInstrumentValue(operation.request_payload) ??
+    findInstrumentValue(operation.response_payload) ??
+    "N/A"
+  );
+};
+
 const RESPONSE_PAYLOAD_PREVIEW_LINES = 18;
 
 const OperationsJournal = () => {
@@ -341,6 +393,7 @@ const OperationsJournal = () => {
                 </th>
                 {[
                   "TYPE",
+                  "INSTRUMENT",
                   "STATUS",
                   "CREATED",
                   "OPERATION ID",
@@ -357,7 +410,7 @@ const OperationsJournal = () => {
             <tbody>
               {!loading && filteredOperations.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center font-mono text-xs text-muted-foreground">
+                  <td colSpan={6} className="py-10 text-center font-mono text-xs text-muted-foreground">
                     No operations found for the current filters.
                   </td>
                 </tr>
@@ -377,6 +430,9 @@ const OperationsJournal = () => {
                     <span className={`inline-flex items-center px-2 py-0.5 rounded border ${typeBadgeClass(op.operation_type)}`}>
                       {prettyType(op.operation_type)}
                     </span>
+                  </td>
+                  <td className="py-2 pr-4 font-mono text-xs max-w-[180px] truncate" title={instrumentNameForOperation(op)}>
+                    {instrumentNameForOperation(op)}
                   </td>
                   <td className="py-2 pr-4 font-mono text-xs">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded border ${statusBadgeClass(op.status)}`}>

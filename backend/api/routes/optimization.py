@@ -38,8 +38,9 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 
 from db.database import get_db
-from db.repository import save_experiment, save_operation_record
+from db.repository import save_experiment
 from api.auth import verify_firebase_token
+from api.operation_logging import execute_with_failed_operation_logging, record_completed_operation
 
 router = APIRouter(prefix="/optimization", tags=["Optimization"])
 
@@ -229,93 +230,100 @@ def run_optimization(
     4. Run GAOptimizer
     5. Return best parameters and resulting cost metrics
     """
-    try:
-        market_data = get_market_data(
-            ticker=req.ticker,
-            start=req.data_start,
-            end=req.data_end,
-            interval=req.interval,
+    def _execute() -> JSONResponse:
+        try:
+            market_data = get_market_data(
+                ticker=req.ticker,
+                start=req.data_start,
+                end=req.data_end,
+                interval=req.interval,
+            )
+            market_data.index = market_data.index.tz_convert("UTC")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Market data error: {str(e)}")
+
+        if market_data.empty:
+            raise HTTPException(status_code=404, detail="No market data available for the specified range.")
+
+        order = _build_order(req,market_data)
+
+        # Build evaluation closure for the GA
+        def eval_fn(params: dict) -> float:
+            return _compute_cost(params, market_data, order)
+
+        optimizer = GAOptimizer(
+            evaluation_function=eval_fn,
+            param_bounds=DEFAULT_PARAM_BOUNDS,
+            population_size=req.population_size,
+            generations=req.generations,
+            seed=req.seed,
         )
-        market_data.index = market_data.index.tz_convert("UTC")
-        
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Market data error: {str(e)}")
 
-    if market_data.empty:
-        raise HTTPException(status_code=404, detail="No market data available for the specified range.")
+        try:
+            result = optimizer.optimize()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
 
-    order = _build_order(req,market_data)
+        best_params = result["best_parameters"]
+        best_cost = result["best_cost"]
 
-    # Build evaluation closure for the GA
-    def eval_fn(params: dict) -> float:
-        return _compute_cost(params, market_data, order)
+        # Run once more with best params to get full metrics
+        best_metrics = _run_with_params(best_params, market_data, order)
 
-    optimizer = GAOptimizer(
-        evaluation_function=eval_fn,
-        param_bounds=DEFAULT_PARAM_BOUNDS,
-        population_size=req.population_size,
-        generations=req.generations,
-        seed=req.seed,
-    )
+        # Run again to obtain logs for persistence
+        strategy = _make_vwap_strategy(best_params)
 
-    try:
-        result = optimizer.optimize()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
+        engine = ExecutionEngine(market_data)
 
-    best_params = result["best_parameters"]
-    best_cost = result["best_cost"]
+        schedule = strategy.generate_schedule(order, market_data)
 
-    # Run once more with best params to get full metrics
-    best_metrics = _run_with_params(best_params, market_data, order)
+        logs = engine.run(order, schedule, "VWAP_GA")
 
-    # Run again to obtain logs for persistence
-    strategy = _make_vwap_strategy(best_params)
+        df_logs = pd.DataFrame([vars(l) for l in logs])
 
-    engine = ExecutionEngine(market_data)
+        df_logs = add_participation_rate(df_logs)
 
-    schedule = strategy.generate_schedule(order, market_data)
+        experiment_id = save_experiment(
+            db=db,
+            order=order,
+            strategy="VWAP_GA",
+            metrics=best_metrics,
+            df_logs=df_logs,
+            params=best_params,
+            seed=req.seed,
+            workers=req.population_size,
+            firebase_uid=user["uid"],
+        )
 
-    logs = engine.run(order, schedule, "VWAP_GA")
+        response = OptimizationResultResponse(
+            best_parameters=best_params,
+            best_cost=round(best_cost, 4),
+            generations_run=req.generations,
+            population_size=req.population_size,
+            best_strategy_metrics=best_metrics,
+        )
 
-    df_logs = pd.DataFrame([vars(l) for l in logs])
+        response_dict = response.dict()
 
-    df_logs = add_participation_rate(df_logs)
+        operation = record_completed_operation(
+            db=db,
+            firebase_uid=user["uid"],
+            operation_type="optimize",
+            request_payload=req.dict(),
+            response_payload=response_dict,
+            experiment_id=experiment_id,
+        )
+        response_dict["operation_id"] = str(operation.id)
 
-    experiment_id = save_experiment(
-        db=db,
-        order=order,
-        strategy="VWAP_GA",
-        metrics=best_metrics,
-        df_logs=df_logs,
-        params=best_params,
-        seed=req.seed,
-        workers=req.population_size,
-        firebase_uid=user["uid"],
-    )
+        return JSONResponse(content=response_dict)
 
-    response = OptimizationResultResponse(
-        best_parameters=best_params,
-        best_cost=round(best_cost, 4),
-        generations_run=req.generations,
-        population_size=req.population_size,
-        best_strategy_metrics=best_metrics,
-    )
-
-    response_dict = response.dict()
-
-    operation = save_operation_record(
+    return execute_with_failed_operation_logging(
         db=db,
         firebase_uid=user["uid"],
         operation_type="optimize",
         request_payload=req.dict(),
-        response_payload=response_dict,
-        status="completed",
-        experiment_id=experiment_id,
+        executor=_execute,
     )
-    response_dict["operation_id"] = str(operation.id)
-
-    return JSONResponse(content=response_dict)
 
 
 @router.post("/evaluate", response_model=EvaluateParamsResponse)
@@ -330,50 +338,58 @@ def evaluate_params(
 
     Returns the implementation shortfall cost and full metrics.
     """
-    try:
-        market_data = get_market_data(
-            ticker=req.ticker,
-            start=req.data_start,
-            end=req.data_end,
-            interval=req.interval,
+    def _execute() -> EvaluateParamsResponse:
+        try:
+            market_data = get_market_data(
+                ticker=req.ticker,
+                start=req.data_start,
+                end=req.data_end,
+                interval=req.interval,
+            )
+            market_data.index = market_data.index.tz_convert("UTC")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Market data error: {str(e)}")
+
+        if market_data.empty:
+            raise HTTPException(status_code=404, detail="No market data available for the specified range.")
+
+        order = _build_order(req,market_data)
+
+        params = {
+            "slice_frequency": req.slice_frequency,
+            "participation_cap": req.participation_cap,
+            "aggressiveness": req.aggressiveness,
+        }
+
+        cost = _compute_cost(params, market_data, order)
+        metrics = _run_with_params(params, market_data, order)
+
+        print("metrics are")
+
+        print(metrics)
+
+        response_payload = EvaluateParamsResponse(
+            parameters=params,
+            cost=round(cost, 4),
+            metrics=metrics,
         )
-        market_data.index = market_data.index.tz_convert("UTC")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Market data error: {str(e)}")
 
-    if market_data.empty:
-        raise HTTPException(status_code=404, detail="No market data available for the specified range.")
+        response_dict = response_payload.dict()
+        operation = record_completed_operation(
+            db=db,
+            firebase_uid=user["uid"],
+            operation_type="evaluate",
+            request_payload=req.dict(),
+            response_payload=response_dict,
+        )
+        response_dict["operation_id"] = str(operation.id)
 
-    order = _build_order(req,market_data)
+        return EvaluateParamsResponse(**response_dict)
 
-    params = {
-        "slice_frequency": req.slice_frequency,
-        "participation_cap": req.participation_cap,
-        "aggressiveness": req.aggressiveness,
-    }
-
-    cost = _compute_cost(params, market_data, order)
-    metrics = _run_with_params(params, market_data, order)
-
-    print("metrics are")
-
-    print(metrics)
-
-    response_payload = EvaluateParamsResponse(
-        parameters=params,
-        cost=round(cost, 4),
-        metrics=metrics,
-    )
-
-    response_dict = response_payload.dict()
-    operation = save_operation_record(
+    return execute_with_failed_operation_logging(
         db=db,
         firebase_uid=user["uid"],
         operation_type="evaluate",
         request_payload=req.dict(),
-        response_payload=response_dict,
-        status="completed",
+        executor=_execute,
     )
-    response_dict["operation_id"] = str(operation.id)
-
-    return EvaluateParamsResponse(**response_dict)
