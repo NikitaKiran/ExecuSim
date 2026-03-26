@@ -1,8 +1,9 @@
 import yfinance as yf
 import pandas as pd
 
+
 def download_market_data(ticker, start, end, interval="5m"):
-    
+
     df = yf.download(
         ticker,
         start=start,
@@ -19,7 +20,7 @@ def download_market_data(ticker, start, end, interval="5m"):
         )
 
     df = df.reset_index()
-    
+
     # Handle possible multiindex columns safely
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = [col[0].lower() for col in df.columns]

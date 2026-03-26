@@ -1,7 +1,10 @@
 
+import logging
 import pandas as pd
 from dataclasses import dataclass
 from typing import List, Literal
+
+logger = logging.getLogger(__name__)
 
 
 # ==========================================
@@ -79,13 +82,13 @@ class ExecutionEngine:
         for child in strategy_schedule:
 
             if child.timestamp not in self.market_data.index:
-                print(f"Warning: No market data for {child.timestamp}. Skipping slice.")
+                logger.warning("No market data for %s. Skipping slice.", child.timestamp)
                 continue
 
             candle = self.market_data.loc[child.timestamp]
 
             fill_price = candle['close']
-            filled_qty = child.quantity  # Assuming 100% fill rate
+            filled_qty = child.quantity
 
             log = ExecutionLog(
                 timestamp=child.timestamp,

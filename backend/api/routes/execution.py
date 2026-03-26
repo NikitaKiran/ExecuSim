@@ -52,14 +52,14 @@ def _build_parent_order(req, market_data) -> ParentOrder:
     market_tz = pytz.timezone("US/Eastern")
 
     start_date = pd.to_datetime(req.data_start).date()
-    end_date   = pd.to_datetime(req.data_end).date()
+    end_date = pd.to_datetime(req.data_end).date()
 
     # Force regular market hours (9:30 – 16:00 ET)
     start_local = market_tz.localize(pd.Timestamp(f"{start_date} 09:30:00"))
-    end_local   = market_tz.localize(pd.Timestamp(f"{end_date} 16:00:00"))
+    end_local = market_tz.localize(pd.Timestamp(f"{end_date} 16:00:00"))
 
     start_time = start_local.astimezone(pytz.UTC)
-    end_time   = end_local.astimezone(pytz.UTC)
+    end_time = end_local.astimezone(pytz.UTC)
 
     return ParentOrder(
         ticker=req.ticker,
@@ -129,14 +129,11 @@ def _run_single_strategy(
     metrics = CostMetrics(
         arrival_price=round(arrival_price, 4),
         average_execution_price=round(avg_price, 4),
-        slippage=round(slippage_dollars_per_share * 10000, 1),           # bps
+        slippage=round(slippage_dollars_per_share * 10000, 1),
         slippage_dollars_per_share=round(slippage_dollars_per_share, 6),
         implementation_shortfall=round(shortfall, 2),
         total_filled_qty=total_qty,
     )
-    print("logs are: ")
-    print(df_logs)
-    print(f"arrival price is: {arrival_price}")
 
     log_entries = []
     for _, row in df_logs.iterrows():
@@ -173,7 +170,7 @@ def list_strategies():
 def run_simulation(
     req: SimulationRequest,
     db: Session = Depends(get_db),
-    user: dict = Depends(verify_firebase_token),  #auth
+    user: dict = Depends(verify_firebase_token),
 ):
     """
     Run an execution simulation for a single strategy.
@@ -185,8 +182,6 @@ def run_simulation(
     4. Execute and compute cost metrics
     """
 
-    print("the requested data is: ")
-    print(req)
     def _execute() -> JSONResponse:
         try:
             market_data = get_market_data(
@@ -202,12 +197,11 @@ def run_simulation(
         if market_data.empty:
             raise HTTPException(status_code=404, detail="No market data available for the specified range.")
 
-        order = _build_parent_order(req,market_data)
+        order = _build_parent_order(req, market_data)
 
         result = _run_single_strategy(market_data, order, req.strategy)
 
         df_logs = result["df_logs"]
-        print(df_logs)
         experiment_id = save_experiment(
             db=db,
             order=order,
@@ -256,7 +250,7 @@ def run_simulation(
 def compare_strategies(
     req: CompareRequest,
     db: Session = Depends(get_db),
-    user: dict = Depends(verify_firebase_token),  #auth
+    user: dict = Depends(verify_firebase_token),
 ):
     """
     Compare TWAP and VWAP on the same parent order.
@@ -277,7 +271,7 @@ def compare_strategies(
         if market_data.empty:
             raise HTTPException(status_code=404, detail="No market data available.")
 
-        order = _build_parent_order(req,market_data)
+        order = _build_parent_order(req, market_data)
 
         comparisons = []
         results = {}

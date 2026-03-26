@@ -132,7 +132,7 @@ def _compute_cost(params: dict, market_data: pd.DataFrame, order: ParentOrder) -
     avg_price = compute_average_execution_price(df_logs)
     total_qty = int(df_logs["filled_qty"].sum())
     shortfall = compute_implementation_shortfall(avg_price, arrival_price, total_qty, order.side)
-    
+
 
     return abs(shortfall)
 
@@ -216,7 +216,7 @@ def list_optimization_params():
 def run_optimization(
     req: OptimizationRequest,
     db: Session = Depends(get_db),
-    user: dict = Depends(verify_firebase_token),  #auth 
+    user: dict = Depends(verify_firebase_token),
 ):
     """
     Run the Genetic Algorithm optimizer to find the best VWAP parameters
@@ -245,7 +245,7 @@ def run_optimization(
         if market_data.empty:
             raise HTTPException(status_code=404, detail="No market data available for the specified range.")
 
-        order = _build_order(req,market_data)
+        order = _build_order(req, market_data)
 
         # Build evaluation closure for the GA
         def eval_fn(params: dict) -> float:
@@ -330,7 +330,7 @@ def run_optimization(
 def evaluate_params(
     req: EvaluateParamsRequest,
     db: Session = Depends(get_db),
-    user: dict = Depends(verify_firebase_token),  #auth 
+    user: dict = Depends(verify_firebase_token),
 ):
     """
     Evaluate a specific set of VWAP parameters without running the full GA.
@@ -353,7 +353,7 @@ def evaluate_params(
         if market_data.empty:
             raise HTTPException(status_code=404, detail="No market data available for the specified range.")
 
-        order = _build_order(req,market_data)
+        order = _build_order(req, market_data)
 
         params = {
             "slice_frequency": req.slice_frequency,
@@ -363,10 +363,6 @@ def evaluate_params(
 
         cost = _compute_cost(params, market_data, order)
         metrics = _run_with_params(params, market_data, order)
-
-        print("metrics are")
-
-        print(metrics)
 
         response_payload = EvaluateParamsResponse(
             parameters=params,

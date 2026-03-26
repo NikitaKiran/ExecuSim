@@ -105,7 +105,7 @@ class VWAPStrategy(Strategy):
             weight = min(weight, self.weight_cap)
 
             if i == len(timestamps) - 1:
-                qty = max(0, order.quantity - cumulative_qty) 
+                qty = max(0, order.quantity - cumulative_qty)
             else:
                 # qty = int(order.quantity * weight)
                 max_qty = int(vol * self.volume_participation_cap)
