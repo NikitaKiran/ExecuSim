@@ -84,13 +84,12 @@ const WheelColumn = ({ items, selected, onChange }: WheelColumnProps) => {
   );
 };
 
-// ── Main Time Wheel Picker ───────────────────────────────
 interface TimeWheelPickerProps {
   label: string;
-  value: string;                // "HH:MM" in 24h
+  value: string;                
   onChange: (value: string) => void;
-  minTime?: string;             // e.g. "09:30"
-  maxTime?: string;             // e.g. "16:00"
+  minTime?: string;           
+  maxTime?: string;             
 }
 
 const HOURS_12 = Array.from({ length: 12 }, (_, i) => String(i === 0 ? 12 : i).padStart(2, "0"));
@@ -109,7 +108,6 @@ function from24(time24: string): { h12: string; min: string; period: string } {
   const period = hh >= 12 ? "PM" : "AM";
   let h12 = hh % 12;
   if (h12 === 0) h12 = 12;
-  // Snap minute to nearest 5
   const snapped = Math.round(mm / 5) * 5;
   return {
     h12: String(h12).padStart(2, "0"),
@@ -137,7 +135,6 @@ const TimeWheelPicker = ({
   const [selM, setSelM] = useState(min);
   const [selP, setSelP] = useState(period);
 
-  // Sync state when value prop changes externally
   useEffect(() => {
     const parts = from24(value || "09:30");
     setSelH(parts.h12);
@@ -145,7 +142,6 @@ const TimeWheelPicker = ({
     setSelP(parts.period);
   }, [value]);
 
-  // Commit change and clamp to min/max
   const commit = useCallback(
     (h: string, m: string, p: string) => {
       let time24 = to24(h, m, p);
@@ -153,7 +149,6 @@ const TimeWheelPicker = ({
       if (time24 > maxTime) time24 = maxTime;
       onChange(time24);
 
-      // Re-sync displayed wheels if clamping occurred
       const clamped = from24(time24);
       setSelH(clamped.h12);
       setSelM(clamped.min);

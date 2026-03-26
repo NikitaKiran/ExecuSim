@@ -7,7 +7,7 @@
 | Health / Root | 2 | `GET /`, `GET /api/health` |
 | Market Data | 7 | `POST /api/data/market` |
 | Execution — List | 1 | `GET /api/execution/strategies` |
-| Execution — Simulate | 12 | `POST /api/execution/simulate` |
+| Execution — Simulate | 13 | `POST /api/execution/simulate` |
 | Execution — Compare | 6 | `POST /api/execution/compare` |
 | Optimization — Params | 1 | `GET /api/optimization/params` |
 | Optimization — Evaluate | 4 | `POST /api/optimization/evaluate` |
@@ -16,7 +16,7 @@
 | DB Persistence | 4 | (verifies DB rows via SQLAlchemy) |
 | End-to-End | 1 | All endpoints in sequence |
 | Edge Cases | 6 | Various error/edge scenarios |
-| **Total** | **57** | |
+| **Total** | **58** | |
 
 ---
 
@@ -58,8 +58,8 @@
 | `test_simulate_zero_quantity` | `POST /api/execution/simulate` | qty=0 → 400/422 |
 | `test_simulate_negative_quantity` | `POST /api/execution/simulate` | qty=-100 → 400/422 |
 | `test_simulate_missing_fields` | `POST /api/execution/simulate` | Partial body → 422 |
-| `test_simulate_returns_experiment_id` | `POST /api/execution/simulate` | Response contains valid UUID |
-| `test_simulate_metrics_values_reasonable` | `POST /api/execution/simulate` | Prices >0, qty ≤ order, slippage reasonable |
+| `test_simulate_returns_experiment_id` *(operation-id contract)* | `POST /api/execution/simulate` | Response contains valid `operation_id` UUID |
+| `test_simulate_metrics_values_reasonable` | `POST /api/execution/simulate` | Prices >0, qty ≤ order, slippage present (reported in bps) |
 | `test_simulate_execution_logs_structure` | `POST /api/execution/simulate` | Each log has all required fields |
 | `test_simulate_total_filled_matches_logs` | `POST /api/execution/simulate` | `total_filled_qty == sum(log.filled_qty)` |
 | `test_simulate_large_order` | `POST /api/execution/simulate` | qty=1M → no 500 |
@@ -80,7 +80,7 @@
 
 | Test | Endpoint | What it checks |
 |---|---|---|
-| `test_list_params` | `GET /api/optimization/params` | Lists slice_frequency, participation_cap, aggressiveness with bounds/dtype |
+| `test_list_params` | `GET /api/optimization/params` | Lists slice_frequency, volume_participation_cap, aggressiveness with bounds/dtype |
 
 ### 7. Optimization — Evaluate (`TestOptimizationEvaluate`)
 
@@ -97,7 +97,7 @@
 |---|---|---|
 | `test_ga_basic` | `POST /api/optimization/optimize` | Returns best_parameters, best_cost, best_strategy_metrics |
 | `test_ga_best_params_in_bounds` | `POST /api/optimization/optimize` | Params within declared min/max bounds |
-| `test_ga_returns_experiment_id` | `POST /api/optimization/optimize` | Response contains valid UUID |
+| `test_ga_returns_experiment_id` *(operation-id contract)* | `POST /api/optimization/optimize` | Response contains valid `operation_id` UUID |
 | `test_ga_deterministic_with_seed` | `POST /api/optimization/optimize` | Same seed → same results |
 | `test_ga_different_seeds_may_differ` | `POST /api/optimization/optimize` | Different seeds → potentially different costs |
 | `test_ga_metrics_structure` | `POST /api/optimization/optimize` | best_strategy_metrics has all required fields |
@@ -168,7 +168,7 @@
 
 ### Minor gaps (acceptable for integration tests):
 
-- **No authentication tests** — API has no auth layer yet.
+- **No auth-negative tests** — suite uses an auth fixture that injects `Authorization: Bearer ...` into `/api/*` calls; missing/invalid token scenarios are not explicitly asserted.
 - **No rate limiting tests** — no rate limiter configured.
 - **No pagination tests** on `GET /experiments` — endpoint doesn't paginate yet.
 - **No DELETE/PUT tests** — API is read+create only, no mutation endpoints exist.

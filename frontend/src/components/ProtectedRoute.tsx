@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { User } from "firebase/auth";
 import { Navigate } from "react-router-dom";
 import { subscribeToAuthChanges } from "../lib/auth";
-import { toast } from "sonner";  // <-- added
+import { toast } from "sonner";
 
 type ProtectedRouteProps = {
   children: JSX.Element;
