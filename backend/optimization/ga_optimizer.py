@@ -1278,7 +1278,10 @@ class GAOptimizer:
 
         self._repair(individual)
 
-        params = {name: individual[i] for i, name in enumerate(self.param_names)}
+        params = {}
+        for i, name in enumerate(self.param_names):
+            _, _, dtype = self.param_bounds[name]
+            params[name] = int(individual[i]) if dtype == "int" else float(individual[i])
 
         try:
 
@@ -1464,7 +1467,7 @@ class GAOptimizer:
 
                 checkpoint = {
                     "population": pop,
-                    "generation": gen,
+                    "generation": gen + 1,
                     "halloffame": halloffame,
                     "rndstate": random.getstate(),
                 }
