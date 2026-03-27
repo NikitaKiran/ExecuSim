@@ -96,7 +96,23 @@ pip install -r requirements.txt
 
 Both the frontend and backend have their own `.env` files. See [Environment Variables](#-environment-variables) below.
 
-#### 5. Run the backend API server
+#### 5. Add Firebase Admin service account credentials
+
+The backend verifies Firebase ID tokens using the Firebase Admin SDK, which requires a service account JSON key.
+
+1. In Firebase Console, go to **Project Settings** → **Service accounts**.
+2. Click **Generate new private key** and download the JSON file.
+3. Save it as `serviceAccountKey.json` inside `backend/`:
+
+```bash
+# from ExecuSim/backend
+mv ~/Downloads/<your-key-file>.json serviceAccountKey.json
+```
+
+By default, the backend looks for `backend/serviceAccountKey.json`.
+If you store the file elsewhere, set `FIREBASE_SERVICE_ACCOUNT_PATH` in `backend/.env`.
+
+#### 6. Run the backend API server
 
 ```bash
 # From the /backend directory
@@ -105,7 +121,7 @@ python server.py
 
 The API will be available at `http://127.0.0.1:8000`.
 
-#### 6. Run the frontend dev server
+#### 7. Run the frontend dev server
 
 ```bash
 # From the /frontend directory
@@ -160,16 +176,23 @@ DATABASE_URL=postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:<DB_PORT>/<DB_NAME>
 
 # Gemini API
 GEMINI_API_KEY=your_gemini_api_key
+
+# Optional override for Firebase Admin service account JSON path
+# Default (if omitted): serviceAccountKey.json in the backend folder
+FIREBASE_SERVICE_ACCOUNT_PATH=/absolute/path/to/serviceAccountKey.json
 ```
 
 | Variable | Where to find it |
 |----------|-----------------|
 | `DB_*` / `DATABASE_URL` | Your local or hosted PostgreSQL instance credentials |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/app/apikey) |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Local path to Firebase service-account JSON (generated in Firebase Console → Project Settings → Service accounts) |
 
 ---
 
 > ⚠️ **Never commit your `.env` files to version control.** Make sure both `frontend/.env` and `backend/.env` are listed in your `.gitignore`.
+
+> ⚠️ **Never commit `backend/serviceAccountKey.json`.** Keep this file local and private.
 
 # ExecuSim API Reference
 
