@@ -15,3 +15,23 @@ def verify_firebase_token(authorization: str | None = Header(default=None)):
         return decoded_token
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+def verify_firebase_token_optional(authorization: str | None = Header(default=None)):
+    """Return decoded token when present and valid; otherwise return None.
+
+    This is used for endpoints that support anonymous access but should still
+    attach user context when available.
+    """
+    if not authorization:
+        return None
+
+    if not authorization.startswith("Bearer "):
+        return None
+
+    token = authorization.split(" ", 1)[1]
+
+    try:
+        return firebase_auth.verify_id_token(token)
+    except Exception:
+        return None
