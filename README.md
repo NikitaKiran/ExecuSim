@@ -89,14 +89,44 @@ source venv/bin/activate
 Install Python dependencies:
 
 ```bash
-pip install -r requirements.txt
+# from ExecuSim/backend
+pip install -r ../requirements.txt
 ```
 
-#### 4. Set up environment variables
+#### 4. Set up PostgreSQL
+
+Create a PostgreSQL user and database (example names shown below):
+
+```bash
+# open psql as a superuser (example for local setup)
+psql postgres
+```
+
+Then run:
+
+```sql
+CREATE ROLE execusim_user WITH LOGIN PASSWORD 'change_me_strong_password';
+CREATE DATABASE execusim OWNER execusim_user;
+GRANT ALL PRIVILEGES ON DATABASE execusim TO execusim_user;
+\q
+```
+
+Use these values in `backend/.env`:
+
+```env
+DB_NAME=execusim
+DB_USER=execusim_user
+DB_PASSWORD=change_me_strong_password
+DB_HOST=localhost
+DB_PORT=5432
+DATABASE_URL=postgresql://execusim_user:change_me_strong_password@localhost:5432/execusim
+```
+
+#### 5. Set up environment variables
 
 Both the frontend and backend have their own `.env` files. See [Environment Variables](#-environment-variables) below.
 
-#### 5. Add Firebase Admin service account credentials
+#### 6. Add Firebase Admin service account credentials
 
 The backend verifies Firebase ID tokens using the Firebase Admin SDK, which requires a service account JSON key.
 
@@ -112,7 +142,7 @@ mv ~/Downloads/<your-key-file>.json serviceAccountKey.json
 By default, the backend looks for `backend/serviceAccountKey.json`.
 If you store the file elsewhere, set `FIREBASE_SERVICE_ACCOUNT_PATH` in `backend/.env`.
 
-#### 6. Run the backend API server
+#### 7. Run the backend API server
 
 ```bash
 # From the /backend directory
@@ -121,7 +151,7 @@ python server.py
 
 The API will be available at `http://127.0.0.1:8000`.
 
-#### 7. Run the frontend dev server
+#### 8. Run the frontend dev server
 
 ```bash
 # From the /frontend directory
