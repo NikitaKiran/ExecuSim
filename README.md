@@ -648,6 +648,80 @@ Evaluate a specific set of VWAP parameters without running the full GA. Useful f
 - `400` — Market data error, empty schedule, or no fills
 - `404` — No market data available for the specified range
 
+---
+
+## Operations History
+
+### `GET /api/operations`
+
+Returns a paginated list of operation records for the authenticated user.
+
+Query params:
+- `limit` (optional, default `50`, min `1`, max `200`)
+- `offset` (optional, default `0`, min `0`)
+
+The response always includes the full `total` count first, so clients can render accurate totals while lazily loading pages.
+
+**Response** (`200 OK`)
+```json
+{
+  "total": 238,
+  "limit": 50,
+  "offset": 0,
+  "items": [
+    {
+      "id": "f1b60b59-786a-4d3f-96af-49b17287f3c6",
+      "operation_type": "simulate",
+      "status": "completed",
+      "created_at": "2026-03-27T10:44:33.121Z",
+      "request_payload": {
+        "ticker": "AAPL"
+      },
+      "response_payload": {
+        "operation_id": "f1b60b59-786a-4d3f-96af-49b17287f3c6"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## Explainability
+
+### `GET /api/explainability/operations/history`
+
+Returns paginated explain-history items (summaries and question-based answers) for the authenticated user.
+
+Query params:
+- `mode` (optional): `summary` or `question`
+- `limit` (optional, default `50`, min `1`, max `200`)
+- `offset` (optional, default `0`, min `0`)
+
+**Response** (`200 OK`)
+```json
+{
+  "total": 74,
+  "limit": 50,
+  "offset": 0,
+  "items": [
+    {
+      "id": "c4e2dfde-2a44-4c8c-969f-6e4eaf60d914",
+      "mode": "summary",
+      "question": null,
+      "answer": "This run favored VWAP because...",
+      "created_at": "2026-03-27T09:20:15.006Z",
+      "operation_ids": [
+        "f1b60b59-786a-4d3f-96af-49b17287f3c6"
+      ]
+    }
+  ]
+}
+```
+
+**Error Responses**
+- `400` — invalid `mode` value (must be `summary` or `question`)
+
 
 ## 📁 Project Structure
 

@@ -25,8 +25,16 @@ type SummaryHistoryItem = {
   operation_ids: string[];
 };
 
+type PaginatedResponse<T> = {
+  total: number;
+  limit: number;
+  offset: number;
+  items: T[];
+};
+
 const HISTORY_PAGE_SIZE = 3;
 const OPERATIONS_PAGE_SIZE = 10;
+const INITIAL_FETCH_LIMIT = 50;
 
 const prettyType = (raw: string) => raw.replace(/_/g, " ").toUpperCase();
 
@@ -127,7 +135,9 @@ const RESPONSE_PAYLOAD_PREVIEW_LINES = 18;
 const OperationsJournal = () => {
   const navigate = useNavigate();
   const [operations, setOperations] = useState<OperationRecord[]>([]);
+  const [operationsTotal, setOperationsTotal] = useState(0);
   const [historyItems, setHistoryItems] = useState<SummaryHistoryItem[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
   const [expandedSummaryIds, setExpandedSummaryIds] = useState<string[]>([]);
   const [expandedLinkedIds, setExpandedLinkedIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -136,7 +146,9 @@ const OperationsJournal = () => {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [activeOperationId, setActiveOperationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMoreOperations, setLoadingMoreOperations] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [operationsPage, setOperationsPage] = useState(0);
   const [historyPage, setHistoryPage] = useState(0);
@@ -144,11 +156,18 @@ const OperationsJournal = () => {
   const [showFullResponsePayload, setShowFullResponsePayload] = useState(false);
   const detailsSectionRef = useRef<HTMLElement | null>(null);
 
-  const fetchOperations = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchOperations = async ({ offset = 0, reset = false }: { offset?: number; reset?: boolean } = {}) => {
+    if (reset) {
+      setLoading(true);
+      setError(null);
+    } else {
+      setLoadingMoreOperations(true);
+    }
+
     try {
-      const response = await apiFetch("/api/operations?limit=300");
+      const response = await apiFetch(
+        `/api/operations?limit=${INITIAL_FETCH_LIMIT}&offset=${offset}`
+      );
       if (!response.ok) {
         let errorMessage = `Server error: ${response.status} ${response.statusText}`;
         try {
@@ -158,20 +177,46 @@ const OperationsJournal = () => {
         throw new Error(errorMessage);
       }
 
-      const payload = (await response.json()) as OperationRecord[];
-      setOperations(Array.isArray(payload) ? payload : []);
+      const payload = (await response.json()) as PaginatedResponse<OperationRecord>;
+      const items = Array.isArray(payload?.items) ? payload.items : [];
+      const total = typeof payload?.total === "number" ? payload.total : items.length;
+
+      setOperationsTotal(total);
+
+      if (reset || offset === 0) {
+        setOperations(items);
+      } else {
+        setOperations((curr) => {
+          const merged = new Map(curr.map((item) => [item.id, item]));
+          items.forEach((item) => merged.set(item.id, item));
+          return Array.from(merged.values());
+        });
+      }
+      return items.length > 0;
     } catch (err: any) {
       setError(err.message || "Failed to load operation history.");
+      return false;
     } finally {
-      setLoading(false);
+      if (reset) {
+        setLoading(false);
+      } else {
+        setLoadingMoreOperations(false);
+      }
     }
   };
 
-  const fetchSummaryHistory = async () => {
-    setSummaryLoading(true);
-    setSummaryError(null);
+  const fetchSummaryHistory = async ({ offset = 0, reset = false }: { offset?: number; reset?: boolean } = {}) => {
+    if (reset) {
+      setSummaryLoading(true);
+      setSummaryError(null);
+    } else {
+      setLoadingMoreHistory(true);
+    }
+
     try {
-      const response = await apiFetch("/api/explainability/operations/history?limit=100");
+      const response = await apiFetch(
+        `/api/explainability/operations/history?limit=${INITIAL_FETCH_LIMIT}&offset=${offset}`
+      );
       if (!response.ok) {
         let errorMessage = `Server error: ${response.status} ${response.statusText}`;
         try {
@@ -181,19 +226,38 @@ const OperationsJournal = () => {
         throw new Error(errorMessage);
       }
 
-      const payload = (await response.json()) as SummaryHistoryItem[];
-      setHistoryItems(Array.isArray(payload) ? payload : []);
-      setHistoryPage(0);
+      const payload = (await response.json()) as PaginatedResponse<SummaryHistoryItem>;
+      const items = Array.isArray(payload?.items) ? payload.items : [];
+      const total = typeof payload?.total === "number" ? payload.total : items.length;
+
+      setHistoryTotal(total);
+
+      if (reset || offset === 0) {
+        setHistoryItems(items);
+        setHistoryPage(0);
+      } else {
+        setHistoryItems((curr) => {
+          const merged = new Map(curr.map((item) => [item.id, item]));
+          items.forEach((item) => merged.set(item.id, item));
+          return Array.from(merged.values());
+        });
+      }
+      return items.length > 0;
     } catch (err: any) {
       setSummaryError(err.message || "Failed to load summary history.");
+      return false;
     } finally {
-      setSummaryLoading(false);
+      if (reset) {
+        setSummaryLoading(false);
+      } else {
+        setLoadingMoreHistory(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchOperations();
-    fetchSummaryHistory();
+    fetchOperations({ reset: true, offset: 0 });
+    fetchSummaryHistory({ reset: true, offset: 0 });
   }, []);
 
   const operationTypes = useMemo(() => {
@@ -228,6 +292,7 @@ const OperationsJournal = () => {
 
   const hasNextOperationsPage =
     (operationsPage + 1) * OPERATIONS_PAGE_SIZE < filteredOperations.length;
+  const hasMoreOperationsToLoad = operations.length < operationsTotal;
 
   const allSelected = useMemo(() => {
     return pagedOperations.length > 0 && pagedOperations.every((op) => selectedIds.includes(op.id));
@@ -253,6 +318,7 @@ const OperationsJournal = () => {
   }, [historyItems, historyPage]);
 
   const hasNextHistoryPage = (historyPage + 1) * HISTORY_PAGE_SIZE < historyItems.length;
+  const hasMoreHistoryToLoad = historyItems.length < historyTotal;
 
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(historyItems.length / HISTORY_PAGE_SIZE) - 1);
@@ -317,7 +383,7 @@ const OperationsJournal = () => {
             PAST OPERATIONS
           </h2>
           <button
-            onClick={fetchOperations}
+            onClick={() => fetchOperations({ reset: true, offset: 0 })}
             disabled={loading}
             className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
           >
@@ -369,7 +435,7 @@ const OperationsJournal = () => {
 
         <p className="font-mono text-[11px] text-muted-foreground mb-3">
           Showing {filteredOperations.length === 0 ? 0 : operationsPage * OPERATIONS_PAGE_SIZE + 1}
-          -{Math.min((operationsPage + 1) * OPERATIONS_PAGE_SIZE, filteredOperations.length)} of {filteredOperations.length} operations (from {operations.length} total).
+          -{Math.min((operationsPage + 1) * OPERATIONS_PAGE_SIZE, filteredOperations.length)} of {operationsTotal}
         </p>
 
         <div className="flex items-center gap-2 mb-3">
@@ -381,11 +447,29 @@ const OperationsJournal = () => {
             PREV
           </button>
           <button
-            onClick={() => setOperationsPage((curr) => curr + 1)}
-            disabled={!hasNextOperationsPage || loading}
+            onClick={async () => {
+              if (hasNextOperationsPage) {
+                setOperationsPage((curr) => curr + 1);
+                return;
+              }
+
+              if (!hasMoreOperationsToLoad || loadingMoreOperations) {
+                return;
+              }
+
+              const shouldAutoAdvance =
+                search.trim() === "" && typeFilter === "ALL" && statusFilter === "ALL";
+
+              const loaded = await fetchOperations({ offset: operations.length, reset: false });
+
+              if (loaded && shouldAutoAdvance) {
+                setOperationsPage((curr) => curr + 1);
+              }
+            }}
+            disabled={(!hasNextOperationsPage && !hasMoreOperationsToLoad) || loading || loadingMoreOperations}
             className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
           >
-            NEXT
+            {loadingMoreOperations ? "LOADING..." : "NEXT"}
           </button>
         </div>
 
@@ -566,7 +650,7 @@ const OperationsJournal = () => {
             {historyItems.length > 0 && (
               <p className="font-mono text-[11px] text-muted-foreground mt-1">
                 Showing {historyPage * HISTORY_PAGE_SIZE + 1}
-                -{Math.min((historyPage + 1) * HISTORY_PAGE_SIZE, historyItems.length)} of {historyItems.length}
+                -{Math.min((historyPage + 1) * HISTORY_PAGE_SIZE, historyItems.length)} of {historyTotal}
               </p>
             )}
           </div>
@@ -579,14 +663,28 @@ const OperationsJournal = () => {
               PREV
             </button>
             <button
-              onClick={() => setHistoryPage((curr) => curr + 1)}
-              disabled={!hasNextHistoryPage || summaryLoading}
+              onClick={async () => {
+                if (hasNextHistoryPage) {
+                  setHistoryPage((curr) => curr + 1);
+                  return;
+                }
+
+                if (!hasMoreHistoryToLoad || loadingMoreHistory) {
+                  return;
+                }
+
+                const loaded = await fetchSummaryHistory({ offset: historyItems.length, reset: false });
+                if (loaded) {
+                  setHistoryPage((curr) => curr + 1);
+                }
+              }}
+              disabled={(!hasNextHistoryPage && !hasMoreHistoryToLoad) || summaryLoading || loadingMoreHistory}
               className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
             >
-              NEXT
+              {loadingMoreHistory ? "LOADING..." : "NEXT"}
             </button>
             <button
-              onClick={fetchSummaryHistory}
+              onClick={() => fetchSummaryHistory({ reset: true, offset: 0 })}
               disabled={summaryLoading}
               className="font-mono text-xs tracking-widest px-3 py-2 border border-border rounded-md hover:bg-muted disabled:text-muted-foreground"
             >
@@ -681,7 +779,7 @@ const OperationsJournal = () => {
                                 key={operationId}
                                 className="border border-border/40 rounded-md px-2 py-2 font-mono text-[10px] text-muted-foreground"
                               >
-                                {operationId.slice(0, 8)}... (not in current page)
+                                {operationId.slice(0, 8)}... (not loaded yet)
                               </div>
                             );
                           }

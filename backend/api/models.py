@@ -212,6 +212,13 @@ class OperationRecordResponse(BaseModel):
     response_payload: dict
 
 
+class OperationRecordListResponse(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: List[OperationRecordResponse]
+
+
 class OperationsExplainResponse(BaseModel):
     explanation_id: str
     mode: Literal["summary", "question"]
@@ -228,3 +235,10 @@ class OperationExplanationHistoryItem(BaseModel):
     answer: str
     created_at: datetime
     operation_ids: List[str]
+
+
+class OperationExplanationHistoryListResponse(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: List[OperationExplanationHistoryItem]

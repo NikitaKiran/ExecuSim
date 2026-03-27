@@ -126,22 +126,44 @@ def list_operation_explanations(
     firebase_uid: str,
     mode: str | None = None,
     limit: int = 100,
+    offset: int = 0,
 ):
     query = db.query(OperationExplanation).filter(OperationExplanation.firebase_uid == firebase_uid)
     if mode:
         query = query.filter(OperationExplanation.mode == mode)
 
-    return query.order_by(OperationExplanation.created_at.desc()).limit(limit).all()
+    return query.order_by(OperationExplanation.created_at.desc()).offset(offset).limit(limit).all()
 
 
-def list_operation_records(db: Session, firebase_uid: str, limit: int = 200):
+def count_operation_explanations(
+    db: Session,
+    firebase_uid: str,
+    mode: str | None = None,
+):
+    query = db.query(OperationExplanation).filter(OperationExplanation.firebase_uid == firebase_uid)
+    if mode:
+        query = query.filter(OperationExplanation.mode == mode)
+    return query.count()
+
+
+def list_operation_records(
+    db: Session,
+    firebase_uid: str,
+    limit: int = 200,
+    offset: int = 0,
+):
     return (
         db.query(OperationRecord)
         .filter(OperationRecord.firebase_uid == firebase_uid)
         .order_by(OperationRecord.created_at.desc())
+        .offset(offset)
         .limit(limit)
         .all()
     )
+
+
+def count_operation_records(db: Session, firebase_uid: str):
+    return db.query(OperationRecord).filter(OperationRecord.firebase_uid == firebase_uid).count()
 
 
 def get_operation_records_by_ids(db: Session, operation_ids: list[str], firebase_uid: str):

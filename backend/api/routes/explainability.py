@@ -1,16 +1,17 @@
 """Explainability routes grounded in persisted operation history."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from api.models import (
     OperationExplanationHistoryItem,
+    OperationExplanationHistoryListResponse,
     OperationsExplainRequest,
     OperationsExplainResponse,
 )
 from api.auth import verify_firebase_token
 from db.database import get_db
-from db.repository import list_operation_explanations
+from db.repository import count_operation_explanations, list_operation_explanations
 from explainability import explain_operations
 
 router = APIRouter(prefix="/explainability", tags=["Explainability"])
@@ -38,21 +39,28 @@ def explain_from_operations(
     return OperationsExplainResponse(**payload)
 
 
-@router.get("/operations/history", response_model=list[OperationExplanationHistoryItem])
+@router.get("/operations/history", response_model=OperationExplanationHistoryListResponse)
 def get_explanation_history(
     mode: str | None = None,
-    limit: int = 100,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     user: dict = Depends(verify_firebase_token),
 ):
     if mode and mode not in {"summary", "question"}:
         raise HTTPException(status_code=400, detail="mode must be either 'summary' or 'question'.")
 
+    total = count_operation_explanations(
+        db=db,
+        firebase_uid=user["uid"],
+        mode=mode,
+    )
     records = list_operation_explanations(
         db=db,
         firebase_uid=user["uid"],
         mode=mode,
         limit=limit,
+        offset=offset,
     )
     payload = []
     for item in records:
@@ -66,4 +74,9 @@ def get_explanation_history(
                 operation_ids=[str(link.operation_id) for link in item.operation_links],
             )
         )
-    return payload
+    return OperationExplanationHistoryListResponse(
+        total=total,
+        limit=limit,
+        offset=offset,
+        items=payload,
+    )
