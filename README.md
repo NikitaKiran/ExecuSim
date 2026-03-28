@@ -221,40 +221,39 @@ FIREBASE_SERVICE_ACCOUNT_PATH=/absolute/path/to/serviceAccountKey.json
 ---
 
 > ⚠️ **Never commit your `.env` files to version control.** Make sure both `frontend/.env` and `backend/.env` are listed in your `.gitignore`.
-
-> ⚠️ **Never commit `backend/serviceAccountKey.json`.** Keep this file local and private.
+**Never commit `backend/serviceAccountKey.json`.** Keep this file local and private.
 
 ---
 
 ## 🖥️ UI Demonstration (Screenshots)
 
 ### Landing Page
-![Landing Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-34-22.png)
+![Landing Screenshot](<UI Snippets/landing_page_1.png>)
 
 ### Market Data Page
-![Market Data Page Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-29-40.png)
+![Market Data Page Screenshot](<UI Snippets/market_data_1.png>)
 
-![Market Data Page Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-29-55.png)
+![Market Data Page Screenshot](<UI Snippets/market_data_2.png>)
 
 ### Simulation Flow (TWAP / VWAP)
-![Simulation Flow Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-05.png)
+![Simulation Flow Screenshot](<UI Snippets/simulation_flow_1.png>)
 
-![Simulation Flow Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-12.png)
+![Simulation Flow Screenshot](<UI Snippets/simulation_flow_2.png>)
 
 ### Compare Strategies
-![Compare Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-19.png)
+![Compare Screenshot](<UI Snippets/compare_strategies_1.png>)
 
-![Compare Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-27.png)
+![Compare Screenshot](<UI Snippets/compare_strategies_2.png>)
 
 ### Optimization (GA) View
-![Optimization Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-32.png)
+![Optimization Screenshot](<UI Snippets/optimization_view_1.png>)
 
-![Optimization Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-39.png)
+![Optimization Screenshot](<UI Snippets/optimization_view_2.png>)
 
 ### Operations Journal
-![Operations Journal Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-46.png)
+![Operations Journal Screenshot](<UI Snippets/operations_journal_1.png>)
 
-![Operations Journal Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-53.png)
+![Operations Journal Screenshot](<UI Snippets/operations_journal_2.png>)
 
 ---
 
