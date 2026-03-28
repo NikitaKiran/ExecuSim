@@ -224,6 +224,40 @@ FIREBASE_SERVICE_ACCOUNT_PATH=/absolute/path/to/serviceAccountKey.json
 
 > ⚠️ **Never commit `backend/serviceAccountKey.json`.** Keep this file local and private.
 
+---
+
+## 🖥️ UI Demonstration (Screenshots)
+
+### Landing Page
+![Landing Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-34-22.png)
+
+### Market Data Page
+![Market Data Page Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-29-40.png)
+
+![Market Data Page Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-29-55.png)
+
+### Simulation Flow (TWAP / VWAP)
+![Simulation Flow Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-05.png)
+
+![Simulation Flow Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-12.png)
+
+### Compare Strategies
+![Compare Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-19.png)
+
+![Compare Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-27.png)
+
+### Optimization (GA) View
+![Optimization Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-32.png)
+
+![Optimization Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-39.png)
+
+### Operations Journal
+![Operations Journal Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-46.png)
+
+![Operations Journal Screenshot](UI%20Snippets/Screenshot%20from%202026-03-27%2014-30-53.png)
+
+---
+
 # ExecuSim API Reference
 
 Base URL: `http://127.0.0.1:8000`
