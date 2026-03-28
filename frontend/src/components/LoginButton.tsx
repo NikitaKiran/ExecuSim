@@ -18,14 +18,22 @@ import {
 export default function LoginButton() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges((firebaseUser) => {
       setUser(firebaseUser);
+      setAvatarLoadFailed(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  const normalizePhotoUrl = (photoUrl: string | null) => {
+    if (!photoUrl) return null;
+    if (photoUrl.startsWith("//")) return `https:${photoUrl}`;
+    return photoUrl;
+  };
 
   const handleLogin = async () => {
     try {
@@ -64,16 +72,19 @@ export default function LoginButton() {
   }
 
   const initial = (user.displayName || user.email || "U").charAt(0).toUpperCase();
+  const avatarSrc = normalizePhotoUrl(user.photoURL);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-500/5 px-2.5 py-1.5 transition hover:bg-cyan-500/10">
-          {user.photoURL ? (
+          {avatarSrc && !avatarLoadFailed ? (
             <img
-              src={user.photoURL}
+              src={avatarSrc}
               alt="profile"
               className="h-7 w-7 rounded-full object-cover ring-1 ring-cyan-400/30"
+              referrerPolicy="no-referrer"
+              onError={() => setAvatarLoadFailed(true)}
             />
           ) : (
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-cyan-500/10 text-[10px] font-semibold text-cyan-300">
