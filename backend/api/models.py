@@ -2,7 +2,7 @@
 Pydantic models for API request/response validation.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator
 from typing import List, Literal, Optional
 from datetime import datetime
 
@@ -36,6 +36,14 @@ class SimulationRequest(BaseModel):
     participation_cap: float = Field(default=0.1, gt=0.0, le=1.0, description="Max participation rate per candle")
     aggressiveness: float = Field(default=1.0, gt=0.0, le=2.0, description="Volume weight multiplier")
 
+    @root_validator(pre=True)
+    def _normalize_vwap_param_aliases(cls, values):
+        if not isinstance(values, dict):
+            return values
+        if values.get("participation_cap") is None and values.get("volume_participation_cap") is not None:
+            values["participation_cap"] = values.get("volume_participation_cap")
+        return values
+
 
 class CompareRequest(BaseModel):
     """Request body for comparing TWAP vs VWAP on the same order."""
@@ -51,6 +59,14 @@ class CompareRequest(BaseModel):
     slice_frequency: int = Field(default=5, ge=1, description="Sample every N candles")
     participation_cap: float = Field(default=0.1, gt=0.0, le=1.0, description="Max participation rate per candle")
     aggressiveness: float = Field(default=1.0, gt=0.0, le=2.0, description="Volume weight multiplier")
+
+    @root_validator(pre=True)
+    def _normalize_vwap_param_aliases(cls, values):
+        if not isinstance(values, dict):
+            return values
+        if values.get("participation_cap") is None and values.get("volume_participation_cap") is not None:
+            values["participation_cap"] = values.get("volume_participation_cap")
+        return values
 
 
 # ==========================================
@@ -177,6 +193,14 @@ class EvaluateParamsRequest(BaseModel):
     slice_frequency: int = Field(default=1, ge=1, description="Sample every N candles")
     participation_cap: float = Field(default=1.0, gt=0.0, le=1.0, description="Max participation rate per candle")
     aggressiveness: float = Field(default=1.0, gt=0.0, le=2.0, description="Volume weight multiplier")
+
+    @root_validator(pre=True)
+    def _normalize_vwap_param_aliases(cls, values):
+        if not isinstance(values, dict):
+            return values
+        if values.get("participation_cap") is None and values.get("volume_participation_cap") is not None:
+            values["participation_cap"] = values.get("volume_participation_cap")
+        return values
 
 
 class EvaluateParamsResponse(BaseModel):

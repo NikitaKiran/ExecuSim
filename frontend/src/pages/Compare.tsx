@@ -23,6 +23,7 @@ const Compare = () => {
   const [usedVwapParams, setUsedVwapParams] = useState<{
     slice_frequency: number;
     participation_cap: number;
+    volume_participation_cap?: number;
     aggressiveness: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +85,7 @@ const Compare = () => {
           interval: activeForm.interval,
           slice_frequency: sliceFrequency,
           participation_cap: participationCap,
+          volume_participation_cap: participationCap,
           aggressiveness,
         }),
       });
@@ -121,6 +123,7 @@ const Compare = () => {
 
     replayRunRef.current = replayOperation.operationId;
     const payload = replayOperation.requestPayload ?? {};
+    const replayParticipationCap = payload.participation_cap ?? payload.volume_participation_cap;
     const replayForm = {
       ticker: asString(payload.ticker),
       side: normalizeSide(payload.side, "upper"),
@@ -131,7 +134,7 @@ const Compare = () => {
       endDate: asString(payload.data_end),
       interval: asString(payload.interval, "5m"),
       sliceFrequency: asString(payload.slice_frequency, "5"),
-      participationCap: asString(payload.participation_cap, "0.1"),
+      participationCap: asString(replayParticipationCap, "0.1"),
       aggressiveness: asString(payload.aggressiveness, "1.0"),
     };
 

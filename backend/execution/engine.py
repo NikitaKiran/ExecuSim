@@ -88,7 +88,17 @@ class ExecutionEngine:
             candle = self.market_data.loc[child.timestamp]
 
             fill_price = candle['close']
-            filled_qty = child.quantity
+            available_liquidity = max(0, int(candle['volume']))
+            filled_qty = min(child.quantity, available_liquidity)
+
+            if filled_qty < child.quantity:
+                logger.info(
+                    "Partial fill at %s: requested=%s filled=%s market_volume=%s",
+                    child.timestamp,
+                    child.quantity,
+                    filled_qty,
+                    available_liquidity,
+                )
 
             log = ExecutionLog(
                 timestamp=child.timestamp,

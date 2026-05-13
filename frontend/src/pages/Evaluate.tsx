@@ -70,6 +70,7 @@ const Evaluate = () => {
         interval: activeForm.interval,
         slice_frequency: sliceFreq,
         participation_cap: partCap,
+        volume_participation_cap: partCap,
         aggressiveness: agg,
       };
 
@@ -122,6 +123,7 @@ const Evaluate = () => {
 
     replayRunRef.current = replayOperation.operationId;
     const payload = replayOperation.requestPayload ?? {};
+    const replayParticipationCap = payload.participation_cap ?? payload.volume_participation_cap;
     const replayForm = {
       ticker: asString(payload.ticker),
       side: normalizeSide(payload.side, "title"),
@@ -132,7 +134,7 @@ const Evaluate = () => {
       endTime: asString(payload.end_time, "16:00"),
       interval: asString(payload.interval, "5m"),
       sliceFrequency: asString(payload.slice_frequency, "5"),
-      participationCapital: asString(payload.participation_cap, "0.10"),
+      participationCapital: asString(replayParticipationCap, "0.10"),
       aggressiveness: asString(payload.aggressiveness, "1.0"),
       seed: asString(payload.seed, "42"),
     };
